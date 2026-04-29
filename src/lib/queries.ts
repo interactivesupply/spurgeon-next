@@ -1,0 +1,281 @@
+import { gql } from '@apollo/client';
+
+export const GET_SERMON = gql`
+  query GetSermon($slug: ID!) {
+    sermon(id: $slug, idType: SLUG) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      sermonFields {
+        sermonNumber
+        scriptureReference
+        topic
+        year
+        datePreached
+        notableQuote
+        pdfUrl
+        videoUrl
+        thumbnailUrl
+      }
+      sermonCollections {
+        nodes {
+          slug
+          name
+        }
+      }
+    }
+  }
+`;
+
+export const GET_ALL_SERMON_SLUGS = gql`
+  query GetAllSermonSlugs {
+    sermons(first: 9999, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes {
+        slug
+      }
+    }
+  }
+`;
+
+export const SPURGEON_SEARCH = gql`
+  query SpurgeonSearch(
+    $search: String
+    $contentTypes: [String]
+    $collection: String
+    $topic: String
+    $year: Int
+    $first: Int
+  ) {
+    spurgeonSearch(
+      search: $search
+      contentTypes: $contentTypes
+      collection: $collection
+      topic: $topic
+      year: $year
+      first: $first
+    ) {
+      ... on Sermon {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        sermonFields {
+          scriptureReference
+          topic
+          year
+          datePreached
+          sermonNumber
+          videoUrl
+          thumbnailUrl
+        }
+        sermonCollections {
+          nodes { slug name }
+        }
+      }
+      ... on MagazineArticle {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        magazineArticleFields {
+          author
+          issue
+          category
+          scriptureReference
+        }
+      }
+    }
+  }
+`;
+
+export const GET_DEVOTIONAL_ENTRY = gql`
+  query GetDevotionalEntry(
+    $devotional: String!
+    $month: String!
+    $day: Int!
+    $period: String
+  ) {
+    devotionalEntries(
+      first: 1
+      where: {
+        metaQuery: {
+          metaArray: [
+            { key: "devotional", value: $devotional, compare: EQUAL_TO }
+            { key: "month", value: $month, compare: EQUAL_TO }
+            { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
+            { key: "period", value: $period, compare: EQUAL_TO }
+          ]
+          relation: AND
+        }
+      }
+    ) {
+      nodes {
+        title
+        content
+        devotionalEntryFields {
+          scripture
+          month
+          day
+          period
+          devotional
+        }
+      }
+    }
+  }
+`;
+
+export const GET_TREASURY_VERSES = gql`
+  query GetTreasuryVerses($psalm: Int!) {
+    treasuryEntries(
+      first: 200
+      where: {
+        metaQuery: {
+          metaArray: [
+            { key: "psalm", value: $psalm, compare: EQUAL_TO, type: NUMERIC }
+          ]
+        }
+      }
+    ) {
+      nodes {
+        id
+        content
+        treasuryEntryFields {
+          psalm
+          verse
+          verseText
+          illustrations
+        }
+      }
+    }
+  }
+`;
+
+export const GET_MAGAZINE_ARTICLES = gql`
+  query GetMagazineArticles(
+    $search: String
+    $first: Int
+    $after: String
+  ) {
+    magazineArticles(
+      first: $first
+      after: $after
+      where: {
+        search: $search
+        orderby: { field: DATE, order: DESC }
+      }
+    ) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        magazineArticleFields {
+          author
+          issue
+          category
+          coverImageUrl
+          scriptureReference
+        }
+      }
+    }
+  }
+`;
+
+export const GET_BOOK_CHAPTERS = gql`
+  query GetBookChapters($book: String!) {
+    bookChapters(
+      first: 200
+      where: {
+        metaQuery: {
+          metaArray: [{ key: "book", value: $book, compare: EQUAL_TO }]
+        }
+      }
+    ) {
+      nodes {
+        id
+        title
+        content
+        excerpt
+        bookChapterFields {
+          book
+          chapterNumber
+        }
+      }
+    }
+  }
+`;
+
+export const GET_HOME_DATA = gql`
+  query GetHomeData($month: String!, $day: Int!) {
+    todayDevotional: devotionalEntries(
+      first: 1
+      where: {
+        metaQuery: {
+          metaArray: [
+            { key: "devotional", value: "morning_and_evening", compare: EQUAL_TO }
+            { key: "period", value: "morning", compare: EQUAL_TO }
+            { key: "month", value: $month, compare: EQUAL_TO }
+            { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
+          ]
+          relation: AND
+        }
+      }
+    ) {
+      nodes {
+        title
+        content
+        devotionalEntryFields { scripture }
+      }
+    }
+    latestSermons: sermons(first: 10, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes {
+        id
+        title
+        slug
+        excerpt
+        sermonFields { scriptureReference year }
+      }
+    }
+    featuredSermons: sermons(first: 6, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        sermonFields { year notableQuote scriptureReference }
+        sermonCollections { nodes { name } }
+      }
+    }
+    featuredArticle: magazineArticles(first: 1, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes { title slug excerpt }
+    }
+  }
+`;
+
+export const FIND_SERMON_BY_BASE44_ID = gql`
+  query FindSermonByLegacyId($base44Id: String!) {
+    sermons(
+      first: 1
+      where: {
+        metaQuery: {
+          metaArray: [{ key: "_base44_id", value: $base44Id, compare: EQUAL_TO }]
+        }
+      }
+    ) {
+      nodes {
+        slug
+      }
+    }
+  }
+`;
