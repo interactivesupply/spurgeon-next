@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
-import { GET_SERMON, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
+import { GET_SERMON, GET_SERMON_BY_ID, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
@@ -188,14 +188,23 @@ export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
 };
 
-export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params }) => {
+export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params, preview, previewData }) => {
   const slug = params?.slug as string;
   const shared = await getSharedPageData();
+  // In preview mode, look up by databaseId from the cookie so drafts and
+  // unsaved title changes both resolve correctly.
+  const previewId = preview && (previewData as any)?.postId;
   try {
-    const { data } = await apolloClient.query({
-      query: GET_SERMON,
-      variables: { slug },
-    });
+    const { data } = previewId
+      ? await apolloClient.query({
+          query: GET_SERMON_BY_ID,
+          variables: { id: String(previewId) },
+          fetchPolicy: 'no-cache',
+        })
+      : await apolloClient.query({
+          query: GET_SERMON,
+          variables: { slug },
+        });
     const sermon = (data as any)?.sermon;
     if (!sermon) {
       return { notFound: true, revalidate: 60 };

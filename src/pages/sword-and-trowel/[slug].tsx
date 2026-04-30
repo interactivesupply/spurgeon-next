@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
-import { GET_MAGAZINE_ARTICLE } from "@/lib/queries";
+import { GET_MAGAZINE_ARTICLE, GET_MAGAZINE_ARTICLE_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import { ArrowLeft, Newspaper, BookOpen, Calendar } from "lucide-react";
@@ -123,14 +123,21 @@ export const getStaticPaths: GetStaticPaths = async () => {
   return { paths: [], fallback: 'blocking' };
 };
 
-export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params }) => {
+export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params, preview, previewData }) => {
   const slug = params?.slug as string;
   const shared = await getSharedPageData();
+  const previewId = preview && (previewData as any)?.postId;
   try {
-    const { data } = await apolloClient.query({
-      query: GET_MAGAZINE_ARTICLE,
-      variables: { slug },
-    });
+    const { data } = previewId
+      ? await apolloClient.query({
+          query: GET_MAGAZINE_ARTICLE_BY_ID,
+          variables: { id: String(previewId) },
+          fetchPolicy: 'no-cache',
+        })
+      : await apolloClient.query({
+          query: GET_MAGAZINE_ARTICLE,
+          variables: { slug },
+        });
     const article = (data as any)?.magazineArticle;
     if (!article) {
       return { notFound: true, revalidate: 60 };

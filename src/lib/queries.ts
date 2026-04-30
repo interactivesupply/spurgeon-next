@@ -30,6 +30,41 @@ export const GET_SERMON = gql`
   }
 `;
 
+/**
+ * Same shape as GET_SERMON but indexed by databaseId. Used during preview
+ * mode (so a draft sermon — which has no published slug yet — can be
+ * resolved by the numeric ID set in the preview cookie).
+ */
+export const GET_SERMON_BY_ID = gql`
+  query GetSermonById($id: ID!) {
+    sermon(id: $id, idType: DATABASE_ID, asPreview: true) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      sermonFields {
+        sermonNumber
+        scriptureReference
+        topic
+        year
+        datePreached
+        notableQuote
+        pdfUrl
+        videoUrl
+        thumbnailUrl
+      }
+      sermonCollections {
+        nodes {
+          slug
+          name
+        }
+      }
+    }
+  }
+`;
+
 export const GET_ALL_SERMON_SLUGS = gql`
   query GetAllSermonSlugs {
     sermons(first: 9999, where: { orderby: { field: DATE, order: DESC } }) {
@@ -233,6 +268,28 @@ export const GET_BOOK_CHAPTERS = gql`
 export const GET_MAGAZINE_ARTICLE = gql`
   query GetMagazineArticle($slug: ID!) {
     magazineArticle(id: $slug, idType: SLUG) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      magazineArticleFields {
+        author
+        issue
+        category
+        coverImageUrl
+        scriptureReference
+        bookTitle
+        bookAuthor
+      }
+    }
+  }
+`;
+
+export const GET_MAGAZINE_ARTICLE_BY_ID = gql`
+  query GetMagazineArticleById($id: ID!) {
+    magazineArticle(id: $id, idType: DATABASE_ID, asPreview: true) {
       id
       databaseId
       title
