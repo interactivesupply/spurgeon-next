@@ -571,6 +571,36 @@ export const GET_BOOKS = gql`
   }
 `;
 
+export const GET_BOOK_BY_SLUG = gql`
+  query GetBookBySlug($slug: ID!) {
+    spurgeonBook(id: $slug, idType: SLUG) {
+      id
+      title
+      slug
+      content
+      spurgeonBookFields {
+        bookDescription
+        bookCategoryLabel
+        bookChapterFilterSlug
+        bookDestinationUrl
+      }
+    }
+  }
+`;
+
+export const GET_READER_BOOK_SLUGS = gql`
+  query GetReaderBookSlugs {
+    spurgeonBooks(first: 50) {
+      nodes {
+        slug
+        spurgeonBookFields {
+          bookChapterFilterSlug
+        }
+      }
+    }
+  }
+`;
+
 export const FIND_SERMON_BY_BASE44_ID = gql`
   query FindSermonByLegacyId($base44Id: String!) {
     sermons(

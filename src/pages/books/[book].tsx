@@ -3,51 +3,24 @@ import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
-import { GET_BOOK_CHAPTERS } from "@/lib/queries";
+import { GET_BOOK_CHAPTERS, GET_BOOK_BY_SLUG, GET_READER_BOOK_SLUGS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { decodeEntities } from "@/lib/utils";
 
-const BOOK_META: Record<string, { title: string; metaSlug: string; subtitle: string }> = {
-  "all-of-grace": {
-    title: "All of Grace",
-    metaSlug: "all_of_grace",
-    subtitle: "An earnest word with those who are seeking salvation.",
-  },
-  "lectures-to-my-students": {
-    title: "Lectures to My Students",
-    metaSlug: "lectures_to_my_students",
-    subtitle: "Practical wisdom on preaching, ministry, and pastoral life.",
-  },
-  "around-the-wicket-gate": {
-    title: "Around the Wicket Gate",
-    metaSlug: "around_the_wicket_gate",
-    subtitle: "A friendly talk with seekers concerning the gate of salvation.",
-  },
-  "an-all-round-ministry": {
-    title: "An All-Round Ministry",
-    metaSlug: "an_all_round_ministry",
-    subtitle: "Addresses to ministers and students from Spurgeon's conferences.",
-  },
-  autobiography: {
-    title: "Autobiography of Charles H. Spurgeon",
-    metaSlug: "autobiography",
-    subtitle: "The life story of Spurgeon in his own words.",
-  },
-};
-
 interface BookReaderProps {
   bookSlug: string;
+  bookTitle: string;
+  bookSubtitle: string;
   chapters: any[];
   shared: SharedPageData;
 }
 
-export default function BookReader({ bookSlug, chapters, shared }: BookReaderProps) {
+export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters, shared }: BookReaderProps) {
   const [chapterIdx, setChapterIdx] = useState(0);
-  const meta = BOOK_META[bookSlug];
 
-  if (!meta) {
+  if (!bookTitle) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -77,11 +50,13 @@ export default function BookReader({ bookSlug, chapters, shared }: BookReaderPro
             All Books
           </Link>
           <h1 className="font-serif text-3xl md:text-5xl font-bold text-primary-foreground mb-3">
-            {meta.title}
+            {decodeEntities(bookTitle)}
           </h1>
-          <p className="font-sans text-primary-foreground/50 text-base max-w-xl">
-            {meta.subtitle}
-          </p>
+          {bookSubtitle && (
+            <p className="font-sans text-primary-foreground/50 text-base max-w-xl">
+              {decodeEntities(bookSubtitle)}
+            </p>
+          )}
         </div>
       </div>
 
@@ -136,35 +111,63 @@ export default function BookReader({ bookSlug, chapters, shared }: BookReaderPro
 }
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  return {
-    paths: Object.keys(BOOK_META).map((slug) => ({ params: { book: slug } })),
-    fallback: 'blocking',
-  };
+  // Build paths for every spurgeon_book whose ACF chapter_filter_slug is
+  // populated — that's the marker for "this book is a reader page" (vs.
+  // M&E/FCB/Treasury, which have their own dedicated pages).
+  try {
+    const { data } = await apolloClient.query({ query: GET_READER_BOOK_SLUGS });
+    const nodes = (data as any)?.spurgeonBooks?.nodes || [];
+    const paths = nodes
+      .filter((n: any) => !!n.spurgeonBookFields?.bookChapterFilterSlug)
+      .map((n: any) => ({ params: { book: n.slug } }));
+    return { paths, fallback: 'blocking' };
+  } catch {
+    return { paths: [], fallback: 'blocking' };
+  }
 };
 
 export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params }) => {
   const bookSlug = params?.book as string;
-  const meta = BOOK_META[bookSlug];
-  if (!meta) return { notFound: true };
-
   const shared = await getSharedPageData();
+
+  let bookTitle = '';
+  let bookSubtitle = '';
+  let chapterFilterSlug = '';
+
   try {
     const { data } = await apolloClient.query({
-      query: GET_BOOK_CHAPTERS,
-      variables: { book: meta.metaSlug },
+      query: GET_BOOK_BY_SLUG,
+      variables: { slug: bookSlug },
     });
-    return {
-      props: {
-        bookSlug,
-        chapters: (data as any)?.bookChapters?.nodes || [],
-        shared,
-      },
-      revalidate: 86400,
-    };
+    const book = (data as any)?.spurgeonBook;
+    if (book) {
+      bookTitle = book.title || '';
+      bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
+      chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
+    }
   } catch {
-    return {
-      props: { bookSlug, chapters: [], shared },
-      revalidate: 60,
-    };
+    // fall through; bookTitle stays empty and the page renders the not-found state
   }
+
+  if (!bookTitle) {
+    return { notFound: true, revalidate: 60 };
+  }
+
+  let chapters: any[] = [];
+  if (chapterFilterSlug) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_BOOK_CHAPTERS,
+        variables: { book: chapterFilterSlug },
+      });
+      chapters = (data as any)?.bookChapters?.nodes || [];
+    } catch {
+      // leave chapters empty; page shows "No chapters available yet"
+    }
+  }
+
+  return {
+    props: { bookSlug, bookTitle, bookSubtitle, chapters, shared },
+    revalidate: 86400,
+  };
 };
