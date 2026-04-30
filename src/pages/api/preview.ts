@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { apolloClient } from '@/lib/apollo-client';
-import { GET_NODE_BY_DATABASE_ID, previewPathForPost } from '@/lib/preview';
+import { resolvePreviewTarget } from '@/lib/preview';
 
 /**
  * Live preview entrypoint. WordPress's "Preview" / "View Post" buttons on
@@ -8,48 +7,38 @@ import { GET_NODE_BY_DATABASE_ID, previewPathForPost } from '@/lib/preview';
  *
  * Flow:
  *   1. Validate secret matches SPURGEON_PREVIEW_SECRET env var.
- *   2. Resolve the post's slug (and confirm post type) via WPGraphQL.
+ *   2. Look up the post via WPGraphQL by databaseId. The lookup includes
+ *      the routing-relevant fields per post type (e.g. book chapter's book
+ *      ACF for figuring out which /books/<slug> to redirect to).
  *   3. Set Next.js preview cookie with { postId, postType }.
  *   4. Redirect to the post's frontend URL.
  *
- * Detail pages (/sermons/[slug], /sword-and-trowel/[slug], etc.) check
- * `context.preview` in their getStaticProps and, when true, fetch the
- * post by databaseId instead of slug — which serves the latest draft
- * via the authenticated GraphQL connection (basic auth currently runs as
- * an admin user, so drafts are visible).
+ * Detail pages check `context.preview` in their getStaticProps and, when
+ * true, fetch the post by databaseId with asPreview: true to get draft
+ * content via the authenticated GraphQL connection.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { postId, postType, secret } = req.query;
+  const { postId, secret } = req.query;
 
   if (!secret || secret !== process.env.SPURGEON_PREVIEW_SECRET) {
     return res.status(401).send('Invalid preview secret');
   }
-  if (!postId || !postType) {
-    return res.status(400).send('Missing postId or postType');
+  if (!postId) {
+    return res.status(400).send('Missing postId');
   }
 
-  let slug = '';
-  let actualPostType = String(postType);
+  let target: { postType: string; path: string } | null = null;
   try {
-    const { data } = await apolloClient.query({
-      query: GET_NODE_BY_DATABASE_ID,
-      variables: { id: String(postId) },
-    });
-    const node = (data as any)?.contentNode;
-    if (!node) {
-      return res.status(404).send('Post not found in WordPress');
-    }
-    slug = node.slug || '';
-    const resolvedType = node?.contentType?.node?.name;
-    if (resolvedType) actualPostType = resolvedType;
+    target = await resolvePreviewTarget(String(postId));
   } catch (err: any) {
     console.error('[preview] post lookup failed', err?.message);
     return res.status(500).send('Failed to resolve post');
   }
+  if (!target) {
+    return res.status(404).send('Post not found or post type does not support preview');
+  }
 
-  res.setPreviewData({ postId: String(postId), postType: actualPostType });
-
-  const path = previewPathForPost(actualPostType, slug);
+  res.setPreviewData({ postId: String(postId), postType: target.postType });
   res.setHeader('Cache-Control', 'private, no-cache, no-store, must-revalidate');
-  return res.redirect(307, path);
+  return res.redirect(307, target.path);
 }

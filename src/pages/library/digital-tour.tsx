@@ -9,7 +9,7 @@ import FooterSection from "@/components/home/FooterSection";
 import TourStop from "@/components/library/TourStop";
 import TourQRModal from "@/components/library/TourQRModal";
 import { apolloClient } from "@/lib/apollo-client";
-import { GET_TOUR_STOPS } from "@/lib/queries";
+import { GET_TOUR_STOPS, GET_TOUR_STOP_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
 interface Stop {
@@ -159,24 +159,53 @@ export default function DigitalTour({ stops, shared }: DigitalTourProps) {
   );
 }
 
-export const getStaticProps: GetStaticProps<DigitalTourProps> = async () => {
+function reshapeTourStop(n: any): Stop {
+  return {
+    id: n.tourStopFields?.stopNumber || '',
+    title: n.title || '',
+    subtitle: n.tourStopFields?.subtitle || '',
+    image: n.tourStopFields?.paintingImage?.node?.sourceUrl || null,
+    paintingDescription: n.tourStopFields?.paintingDescription || '',
+    narrative: n.tourStopFields?.narrative || '',
+    quote: n.tourStopFields?.quote || '',
+  };
+}
+
+export const getStaticProps: GetStaticProps<DigitalTourProps> = async ({ preview, previewData }) => {
   const shared = await getSharedPageData();
   let stops: Stop[] = [];
 
   try {
     const { data } = await apolloClient.query({ query: GET_TOUR_STOPS });
-    const nodes = (data as any)?.tourStops?.nodes || [];
-    stops = nodes.map((n: any) => ({
-      id: n.tourStopFields?.stopNumber || '',
-      title: n.title || '',
-      subtitle: n.tourStopFields?.subtitle || '',
-      image: n.tourStopFields?.paintingImage?.node?.sourceUrl || null,
-      paintingDescription: n.tourStopFields?.paintingDescription || '',
-      narrative: n.tourStopFields?.narrative || '',
-      quote: n.tourStopFields?.quote || '',
-    }));
+    stops = ((data as any)?.tourStops?.nodes || []).map(reshapeTourStop);
   } catch (err: any) {
     console.error('[GetTourStops failed]', err?.message);
+  }
+
+  // In preview mode for a tour_stop, replace (or insert) the matching stop
+  // so the editor sees their draft inline with the rest of the tour.
+  const previewId = preview && (previewData as any)?.postType === 'tour_stop'
+    ? (previewData as any).postId
+    : null;
+  if (previewId) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_TOUR_STOP_BY_ID,
+        variables: { id: String(previewId) },
+        fetchPolicy: 'no-cache',
+      });
+      const draft = (data as any)?.tourStop;
+      if (draft) {
+        const reshaped = reshapeTourStop(draft);
+        const idx = stops.findIndex((s) => s.id === reshaped.id);
+        if (idx >= 0) stops[idx] = reshaped;
+        else stops.push(reshaped);
+        // Sort by stop number so the inserted draft lands in order
+        stops.sort((a, b) => (a.id || '').localeCompare(b.id || ''));
+      }
+    } catch (err: any) {
+      console.error('[GetTourStopById preview failed]', err?.message);
+    }
   }
 
   return { props: { stops, shared }, revalidate: 3600 };

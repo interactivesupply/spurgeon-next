@@ -1,95 +1,63 @@
-import { gql } from '@apollo/client';
+import { apolloClient } from './apollo-client';
+import { GET_PREVIEW_TARGET } from './queries';
 
 /**
- * Build the frontend URL for a post given its post type + slug. Used by the
- * /api/preview route to redirect to the right detail page after setting the
- * preview cookie.
+ * Map the `book` ACF value (underscored, e.g. "all_of_grace") to a frontend
+ * slug (dashed). Mirrors the seeded spurgeon_book slugs.
  */
-export function previewPathForPost(postType: string, slug: string): string {
-  switch (postType) {
-    case 'spurgeon_sermon':
-      return `/sermons/${slug}`;
-    case 'magazine_article':
-      return `/sword-and-trowel/${slug}`;
-    case 'book_chapter':
-      return `/books`;
-    case 'devotional_entry':
-      return `/books/morning-and-evening`;
-    case 'treasury_entry':
-      return `/books/treasury-of-david`;
-    case 'tour_stop':
-      return `/library/digital-tour`;
-    case 'spurgeon_book':
-      return `/books/${slug}`;
-    default:
-      return '/';
-  }
+const BOOK_SLUG_FROM_FILTER: Record<string, string> = {
+  all_of_grace: 'all-of-grace',
+  lectures_to_my_students: 'lectures-to-my-students',
+  around_the_wicket_gate: 'around-the-wicket-gate',
+  an_all_round_ministry: 'an-all-round-ministry',
+  autobiography: 'autobiography',
+};
+
+function flat(value: any) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 /**
- * Look up post type + slug from a databaseId. Used by /api/preview when only
- * the WordPress numeric post ID is known. Issues a single GraphQL request
- * via the contentNode union, which works for any registered CPT.
+ * Resolve a WordPress post (by databaseId) to the frontend URL where its
+ * preview should land. Returns null if the post type isn't one we've wired
+ * through preview yet.
  */
-export const GET_NODE_BY_DATABASE_ID = gql`
-  query GetNodeByDatabaseId($id: ID!) {
-    contentNode(id: $id, idType: DATABASE_ID) {
-      databaseId
-      slug
-      ... on ContentNode {
-        contentType {
-          node { name }
-        }
-      }
-    }
-  }
-`;
+export async function resolvePreviewTarget(databaseId: string | number): Promise<{
+  postType: string;
+  path: string;
+} | null> {
+  const { data } = await apolloClient.query({
+    query: GET_PREVIEW_TARGET,
+    variables: { id: String(databaseId) },
+    fetchPolicy: 'no-cache',
+  });
+  const node: any = (data as any)?.contentNode;
+  if (!node) return null;
 
-/**
- * Generic single-node lookup by databaseId for use during preview rendering
- * (so getStaticProps can fetch a draft post by ID rather than slug). Returns
- * the union ContentNode; callers narrow with type-conditional fragments as
- * needed.
- */
-export const GET_PREVIEW_NODE = gql`
-  query GetPreviewNode($id: ID!) {
-    contentNode(id: $id, idType: DATABASE_ID) {
-      databaseId
-      slug
-      status
-      ... on Sermon {
-        title
-        content
-        excerpt
-        sermonFields {
-          sermonNumber
-          scriptureReference
-          topic
-          year
-          datePreached
-          notableQuote
-          pdfUrl
-          videoUrl
-          thumbnailUrl
-        }
-        sermonCollections {
-          nodes { slug name }
-        }
-      }
-      ... on MagazineArticle {
-        title
-        content
-        excerpt
-        magazineArticleFields {
-          author
-          issue
-          category
-          coverImageUrl
-          scriptureReference
-          bookTitle
-          bookAuthor
-        }
-      }
+  const postType = node?.contentType?.node?.name;
+  const slug = node.slug || '';
+
+  switch (postType) {
+    case 'spurgeon_sermon':
+      return { postType, path: `/sermons/${slug}` };
+    case 'magazine_article':
+      return { postType, path: `/sword-and-trowel/${slug}` };
+    case 'book_chapter': {
+      const bookFilter = flat(node?.bookChapterFields?.book);
+      const bookSlug = bookFilter ? BOOK_SLUG_FROM_FILTER[bookFilter] || '' : '';
+      return { postType, path: bookSlug ? `/books/${bookSlug}` : '/books' };
     }
+    case 'devotional_entry': {
+      const devo = flat(node?.devotionalEntryFields?.devotional);
+      return { postType, path: devo === 'faiths_check_book' ? '/books/faiths-check-book' : '/books/morning-and-evening' };
+    }
+    case 'treasury_entry':
+      return { postType, path: '/books/treasury-of-david' };
+    case 'tour_stop':
+      return { postType, path: '/library/digital-tour' };
+    case 'spurgeon_book':
+      return { postType, path: `/books/${slug}` };
+    default:
+      return null;
   }
-`;
+}

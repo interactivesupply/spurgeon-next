@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
-import { GET_FCB_ENTRY } from "@/lib/queries";
+import { GET_FCB_ENTRY, GET_DEVOTIONAL_ENTRY_BY_ID } from "@/lib/queries";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
@@ -19,15 +19,16 @@ function todayKey() {
 
 interface PageProps {
   shared: SharedPageData;
+  previewEntry?: any | null;
 }
 
-export default function FaithsCheckBook({ shared }: PageProps) {
+export default function FaithsCheckBook({ shared, previewEntry }: PageProps) {
   const { month: initMonth, day: initDay } = todayKey();
   const [month, setMonth] = useState(initMonth);
   const [day, setDay] = useState(initDay);
 
   const [fetchEntry, { data, loading }] = useLazyQuery(GET_FCB_ENTRY);
-  const entry: any = (data as any)?.devotionalEntries?.nodes?.[0];
+  const entry: any = previewEntry || (data as any)?.devotionalEntries?.nodes?.[0];
 
   useEffect(() => {
     fetchEntry({ variables: { month, day: String(day) } });
@@ -134,7 +135,24 @@ export default function FaithsCheckBook({ shared }: PageProps) {
   );
 }
 
-export const getStaticProps: GetStaticProps<PageProps> = async () => {
+export const getStaticProps: GetStaticProps<PageProps> = async ({ preview, previewData }) => {
   const shared = await getSharedPageData();
-  return { props: { shared }, revalidate: 3600 };
+  let previewEntry: any = null;
+  const previewId = preview && (previewData as any)?.postType === 'devotional_entry'
+    ? (previewData as any).postId
+    : null;
+  if (previewId) {
+    try {
+      const { apolloClient } = await import('@/lib/apollo-client');
+      const { data } = await apolloClient.query({
+        query: GET_DEVOTIONAL_ENTRY_BY_ID,
+        variables: { id: String(previewId) },
+        fetchPolicy: 'no-cache',
+      });
+      previewEntry = (data as any)?.devotionalEntry || null;
+    } catch (err: any) {
+      console.error('[GetDevotionalEntryById preview failed]', err?.message);
+    }
+  }
+  return { props: { shared, previewEntry }, revalidate: 3600 };
 };

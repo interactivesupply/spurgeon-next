@@ -3,7 +3,14 @@ import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
-import { GET_BOOK_CHAPTERS, GET_BOOK_BY_SLUG, GET_READER_BOOK_SLUGS } from "@/lib/queries";
+import {
+  GET_BOOK_CHAPTERS,
+  GET_BOOK_CHAPTERS_PREVIEW,
+  GET_BOOK_BY_SLUG,
+  GET_READER_BOOK_SLUGS,
+  GET_BOOK_CHAPTER_BY_ID,
+  GET_SPURGEON_BOOK_BY_ID,
+} from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
@@ -126,7 +133,11 @@ export const getStaticPaths: GetStaticPaths = async () => {
   }
 };
 
-export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params }) => {
+function flat(value: any): any {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params, preview, previewData }) => {
   const bookSlug = params?.book as string;
   const shared = await getSharedPageData();
 
@@ -134,36 +145,97 @@ export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params }
   let bookSubtitle = '';
   let chapterFilterSlug = '';
 
-  try {
-    const { data } = await apolloClient.query({
-      query: GET_BOOK_BY_SLUG,
-      variables: { slug: bookSlug },
-    });
-    const book = (data as any)?.spurgeonBook;
-    if (book) {
-      bookTitle = book.title || '';
-      bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
-      chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
+  const previewId = preview ? (previewData as any)?.postId : null;
+  const previewType = preview ? (previewData as any)?.postType : null;
+
+  // Preview mode A: spurgeon_book draft. Fetch by ID, override book metadata.
+  if (previewId && previewType === 'spurgeon_book') {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_SPURGEON_BOOK_BY_ID,
+        variables: { id: String(previewId) },
+        fetchPolicy: 'no-cache',
+      });
+      const book = (data as any)?.spurgeonBook;
+      if (book) {
+        bookTitle = book.title || '';
+        bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
+        chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
+      }
+    } catch (err: any) {
+      console.error('[GetSpurgeonBookById preview failed]', err?.message);
     }
-  } catch {
-    // fall through; bookTitle stays empty and the page renders the not-found state
+  }
+
+  // Preview mode B: book_chapter draft. Fetch the chapter to discover its
+  // book filter slug, then look up the parent book and its chapters.
+  let previewChapter: any = null;
+  if (previewId && previewType === 'book_chapter') {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_BOOK_CHAPTER_BY_ID,
+        variables: { id: String(previewId) },
+        fetchPolicy: 'no-cache',
+      });
+      previewChapter = (data as any)?.bookChapter;
+      if (previewChapter) {
+        chapterFilterSlug = flat(previewChapter.bookChapterFields?.book) || '';
+      }
+    } catch (err: any) {
+      console.error('[GetBookChapterById preview failed]', err?.message);
+    }
+  }
+
+  // Default lookup by URL slug if we didn't already populate from preview.
+  if (!bookTitle) {
+    try {
+      const { data } = await apolloClient.query({
+        query: GET_BOOK_BY_SLUG,
+        variables: { slug: bookSlug },
+      });
+      const book = (data as any)?.spurgeonBook;
+      if (book) {
+        bookTitle = book.title || '';
+        bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
+        if (!chapterFilterSlug) {
+          chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
+        }
+      }
+    } catch {
+      // fall through
+    }
   }
 
   if (!bookTitle) {
     return { notFound: true, revalidate: 60 };
   }
 
+  // In preview mode for either book or chapter, query chapters with all
+  // statuses so drafts show up alongside published.
+  const chaptersQuery = (previewType === 'book_chapter' || previewType === 'spurgeon_book')
+    ? GET_BOOK_CHAPTERS_PREVIEW
+    : GET_BOOK_CHAPTERS;
+
   let chapters: any[] = [];
   if (chapterFilterSlug) {
     try {
       const { data } = await apolloClient.query({
-        query: GET_BOOK_CHAPTERS,
+        query: chaptersQuery,
         variables: { book: chapterFilterSlug },
+        fetchPolicy: previewType ? 'no-cache' : 'cache-first',
       });
       chapters = (data as any)?.bookChapters?.nodes || [];
     } catch {
       // leave chapters empty; page shows "No chapters available yet"
     }
+  }
+
+  // If we previewed a chapter that wasn't in the list (e.g. brand-new
+  // unpublished draft), splice it in.
+  if (previewChapter) {
+    const idx = chapters.findIndex((c) => c.databaseId === previewChapter.databaseId);
+    if (idx >= 0) chapters[idx] = previewChapter;
+    else chapters = [...chapters, previewChapter];
   }
 
   return {

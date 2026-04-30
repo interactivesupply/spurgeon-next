@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
-import { GET_TREASURY_VERSES } from "@/lib/queries";
+import { GET_TREASURY_VERSES, GET_TREASURY_ENTRY_BY_ID } from "@/lib/queries";
 import { ArrowLeft, ScrollText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
@@ -12,23 +12,38 @@ const PSALMS = Array.from({ length: 150 }, (_, i) => i + 1);
 
 interface PageProps {
   shared: SharedPageData;
+  previewEntry?: any | null;
 }
 
-export default function TreasuryOfDavid({ shared }: PageProps) {
-  const [psalm, setPsalm] = useState(1);
-  const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
+export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
+  // When previewing, default to the previewed entry's psalm and verse.
+  const initialPsalm = previewEntry?.treasuryEntryFields?.psalm || 1;
+  const initialVerse = previewEntry?.treasuryEntryFields?.verse ?? null;
+  const [psalm, setPsalm] = useState<number>(Number(initialPsalm) || 1);
+  const [selectedVerse, setSelectedVerse] = useState<number | null>(initialVerse);
 
   const [fetchVerses, { data, loading }] = useLazyQuery(GET_TREASURY_VERSES);
   const verses: any[] = (data as any)?.treasuryEntries?.nodes || [];
 
   useEffect(() => {
     fetchVerses({ variables: { psalm: String(psalm) } });
-    setSelectedVerse(null);
-  }, [psalm, fetchVerses]);
+    if (!previewEntry) setSelectedVerse(null);
+  }, [psalm, fetchVerses, previewEntry]);
 
-  const sortedVerses = [...verses].sort(
+  // If we're previewing a draft entry on this psalm, splice it into the
+  // sorted verses so the navigator highlights it.
+  let sortedVerses = [...verses].sort(
     (a, b) => (a.treasuryEntryFields?.verse ?? 0) - (b.treasuryEntryFields?.verse ?? 0)
   );
+  if (previewEntry && Number(previewEntry.treasuryEntryFields?.psalm) === psalm) {
+    const idx = sortedVerses.findIndex(
+      (v) => v.treasuryEntryFields?.verse === previewEntry.treasuryEntryFields?.verse
+    );
+    if (idx >= 0) sortedVerses[idx] = previewEntry;
+    else sortedVerses = [...sortedVerses, previewEntry].sort(
+      (a, b) => (a.treasuryEntryFields?.verse ?? 0) - (b.treasuryEntryFields?.verse ?? 0)
+    );
+  }
 
   const currentEntry = selectedVerse !== null
     ? sortedVerses.find((v) => v.treasuryEntryFields?.verse === selectedVerse)
@@ -141,7 +156,24 @@ export default function TreasuryOfDavid({ shared }: PageProps) {
   );
 }
 
-export const getStaticProps: GetStaticProps<PageProps> = async () => {
+export const getStaticProps: GetStaticProps<PageProps> = async ({ preview, previewData }) => {
   const shared = await getSharedPageData();
-  return { props: { shared }, revalidate: 3600 };
+  let previewEntry: any = null;
+  const previewId = preview && (previewData as any)?.postType === 'treasury_entry'
+    ? (previewData as any).postId
+    : null;
+  if (previewId) {
+    try {
+      const { apolloClient } = await import('@/lib/apollo-client');
+      const { data } = await apolloClient.query({
+        query: GET_TREASURY_ENTRY_BY_ID,
+        variables: { id: String(previewId) },
+        fetchPolicy: 'no-cache',
+      });
+      previewEntry = (data as any)?.treasuryEntry || null;
+    } catch (err: any) {
+      console.error('[GetTreasuryEntryById preview failed]', err?.message);
+    }
+  }
+  return { props: { shared, previewEntry }, revalidate: 3600 };
 };

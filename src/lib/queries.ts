@@ -241,6 +241,147 @@ export const GET_MAGAZINE_ARTICLES = gql`
   }
 `;
 
+export const GET_BOOK_CHAPTER_BY_ID = gql`
+  query GetBookChapterById($id: ID!) {
+    bookChapter(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      content
+      excerpt
+      status
+      bookChapterFields {
+        book
+        chapterNumber
+      }
+    }
+  }
+`;
+
+/**
+ * Like GET_BOOK_CHAPTERS but queries with `stati: [PUBLISH, DRAFT, PENDING]`
+ * so unpublished chapters surface during preview rendering. The
+ * authenticated proxy connection grants access; unauthenticated requests
+ * still only see PUBLISH posts.
+ */
+export const GET_BOOK_CHAPTERS_PREVIEW = gql`
+  query GetBookChaptersPreview($book: String!) {
+    bookChapters(
+      first: 200
+      where: {
+        stati: [PUBLISH, DRAFT, PENDING]
+        metaQuery: {
+          metaArray: [{ key: "book", value: $book, compare: EQUAL_TO }]
+        }
+      }
+    ) {
+      nodes {
+        id
+        databaseId
+        title
+        content
+        excerpt
+        status
+        bookChapterFields {
+          book
+          chapterNumber
+        }
+      }
+    }
+  }
+`;
+
+export const GET_DEVOTIONAL_ENTRY_BY_ID = gql`
+  query GetDevotionalEntryById($id: ID!) {
+    devotionalEntry(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      content
+      status
+      devotionalEntryFields {
+        scripture
+        month
+        day
+        period
+        devotional
+      }
+    }
+  }
+`;
+
+export const GET_TREASURY_ENTRY_BY_ID = gql`
+  query GetTreasuryEntryById($id: ID!) {
+    treasuryEntry(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      content
+      status
+      treasuryEntryFields {
+        psalm
+        verse
+        verseText
+        illustrations
+      }
+    }
+  }
+`;
+
+export const GET_TOUR_STOP_BY_ID = gql`
+  query GetTourStopById($id: ID!) {
+    tourStop(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      status
+      tourStopFields {
+        stopNumber
+        subtitle
+        paintingImage { node { sourceUrl altText } }
+        paintingDescription
+        narrative
+        quote
+      }
+    }
+  }
+`;
+
+export const GET_SPURGEON_BOOK_BY_ID = gql`
+  query GetSpurgeonBookById($id: ID!) {
+    spurgeonBook(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      slug
+      content
+      status
+      spurgeonBookFields {
+        bookDescription
+        bookCategoryLabel
+        bookChapterFilterSlug
+        bookDestinationUrl
+      }
+    }
+  }
+`;
+
+/**
+ * Used by /api/preview to look up the routing-relevant fields for any post
+ * type so we can build the right redirect URL. Type-conditional fragments
+ * cover each CPT we route through preview.
+ */
+export const GET_PREVIEW_TARGET = gql`
+  query GetPreviewTarget($id: ID!) {
+    contentNode(id: $id, idType: DATABASE_ID) {
+      databaseId
+      slug
+      contentType { node { name } }
+      ... on BookChapter {
+        bookChapterFields { book }
+      }
+      ... on DevotionalEntry {
+        devotionalEntryFields { devotional }
+      }
+    }
+  }
+`;
+
 export const GET_BOOK_CHAPTERS = gql`
   query GetBookChapters($book: String!) {
     bookChapters(
