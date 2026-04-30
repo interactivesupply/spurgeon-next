@@ -5,6 +5,7 @@ import { apolloClient } from '@/lib/apollo-client';
 import { queryClient } from '@/lib/query-client';
 import Layout from '@/components/Layout';
 import PreviewBanner from '@/components/PreviewBanner';
+import UserbackLoader from '@/components/UserbackLoader';
 import '@/styles/globals.css';
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -12,6 +13,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <ApolloProvider client={apolloClient}>
       <QueryClientProvider client={queryClient}>
         <PreviewBanner />
+        <UserbackLoader />
         <Layout>
           <Component {...pageProps} />
         </Layout>
