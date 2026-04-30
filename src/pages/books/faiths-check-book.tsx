@@ -6,6 +6,7 @@ import { GET_FCB_ENTRY } from "@/lib/queries";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
+import { decodeEntities } from "@/lib/utils";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
@@ -103,7 +104,7 @@ export default function FaithsCheckBook() {
               </p>
             )}
             {entry.title && (
-              <h2 className="font-serif text-xl font-bold text-foreground mb-4">{entry.title}</h2>
+              <h2 className="font-serif text-xl font-bold text-foreground mb-4">{decodeEntities(entry.title)}</h2>
             )}
             {entry.content && (
               <div

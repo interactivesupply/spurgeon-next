@@ -30,8 +30,11 @@ export const apolloClient = new ApolloClient({
   link: httpLink,
   cache: new InMemoryCache(),
   defaultOptions: {
-    query: { fetchPolicy: 'cache-first' },
-    watchQuery: { fetchPolicy: 'cache-first' },
+    // SSR/SSG should always hit WordPress fresh so getStaticProps + ISR
+    // are the single source of cache truth. Browser queries cache normally
+    // for fast in-session navigation.
+    query: { fetchPolicy: isServer ? 'no-cache' : 'cache-first' },
+    watchQuery: { fetchPolicy: isServer ? 'no-cache' : 'cache-first' },
   },
   ssrMode: isServer,
 });

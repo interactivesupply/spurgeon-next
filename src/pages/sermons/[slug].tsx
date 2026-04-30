@@ -4,6 +4,7 @@ import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_SERMON, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
+import { decodeEntities } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,7 @@ function PullQuote({ text }: { text: string }) {
     <div className="my-12 -mx-4 md:-mx-12 px-8 md:px-16 py-10 bg-primary/5 border-y border-primary/10">
       <blockquote className="text-center">
         <p className="font-serif text-xl md:text-2xl italic text-foreground/85 leading-relaxed">
-          "{text}"
+          "{decodeEntities(text)}"
         </p>
       </blockquote>
     </div>
@@ -89,7 +90,7 @@ export default function SermonDetailPage({ sermon }: SermonPageProps) {
             </div>
 
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight mb-4">
-              {sermon.title}
+              {decodeEntities(sermon.title)}
             </h1>
           </div>
 

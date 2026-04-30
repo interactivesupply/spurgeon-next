@@ -41,22 +41,8 @@ export const GET_ALL_SERMON_SLUGS = gql`
 `;
 
 export const SPURGEON_SEARCH = gql`
-  query SpurgeonSearch(
-    $search: String
-    $contentTypes: [String]
-    $collection: String
-    $topic: String
-    $year: Int
-    $first: Int
-  ) {
-    spurgeonSearch(
-      search: $search
-      contentTypes: $contentTypes
-      collection: $collection
-      topic: $topic
-      year: $year
-      first: $first
-    ) {
+  query SpurgeonSearch($search: String, $first: Int) {
+    spurgeonSearch(search: $search, first: $first) {
       ... on Sermon {
         id
         databaseId
@@ -69,6 +55,7 @@ export const SPURGEON_SEARCH = gql`
           year
           datePreached
           sermonNumber
+          notableQuote
           videoUrl
           thumbnailUrl
         }
@@ -238,6 +225,28 @@ export const GET_BOOK_CHAPTERS = gql`
           book
           chapterNumber
         }
+      }
+    }
+  }
+`;
+
+export const GET_MAGAZINE_ARTICLE = gql`
+  query GetMagazineArticle($slug: ID!) {
+    magazineArticle(id: $slug, idType: SLUG) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      magazineArticleFields {
+        author
+        issue
+        category
+        coverImageUrl
+        scriptureReference
+        bookTitle
+        bookAuthor
       }
     }
   }

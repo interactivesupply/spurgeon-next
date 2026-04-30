@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, BookOpen, Sun, FileText, Scroll } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { decodeEntities } from "@/lib/utils";
 import { format } from "date-fns";
 
 const QUOTES = [
@@ -161,7 +162,7 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
                             <p className="font-sans text-xs text-primary/70 mb-2">{item.scripture}</p>
                           )}
                           <h3 className="font-serif text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
-                            {item.title}
+                            {decodeEntities(item.title)}
                           </h3>
                           {item.text && (
                             <div

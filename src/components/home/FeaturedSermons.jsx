@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, BookOpen } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { decodeEntities } from "@/lib/utils";
 
 /**
  * Receives `sermons` as a prop from getStaticProps. When the WordPress backend
@@ -69,7 +70,7 @@ export default function FeaturedSermons({ sermons = [] }) {
                         )}
                       </div>
                       <h3 className="font-serif text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
-                        {sermon.title}
+                        {decodeEntities(sermon.title)}
                       </h3>
                       {fields.scriptureReference && (
                         <p className="text-sm font-sans text-primary/70 mb-3">
@@ -83,7 +84,7 @@ export default function FeaturedSermons({ sermons = [] }) {
                       )}
                       {fields.notableQuote && (
                         <blockquote className="mt-4 pl-4 border-l-2 border-accent/30 text-sm font-serif italic text-muted-foreground line-clamp-2">
-                          "{fields.notableQuote}"
+                          "{decodeEntities(fields.notableQuote)}"
                         </blockquote>
                       )}
                     </div>

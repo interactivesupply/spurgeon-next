@@ -4,12 +4,40 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, PlayCircle } from "lucide-react";
+import { stripHtml, decodeEntities } from "@/lib/utils";
 
 // Extract YouTube video ID from a URL
 function getYouTubeId(url) {
   if (!url) return null;
   const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   return match ? match[1] : null;
+}
+
+// Pick the right URL based on the result's WordPress post type. Sermons and
+// articles each have their own detail page; book chapters route to the book
+// reader; devotional and treasury hits route to their respective pages.
+function resolveHref(item) {
+  if (item.postType) {
+    switch (item.postType) {
+      case 'spurgeon_sermon':
+        return ROUTES.SermonDetail(item.slug || item.id);
+      case 'magazine_article':
+        return ROUTES.MagazineArticle(item.slug || item.id);
+      case 'book_chapter':
+        return item.book ? ROUTES.BookReader(item.book.replace(/_/g, '-')) : ROUTES.Books;
+      case 'devotional_entry':
+        return item.devotional === 'faiths_check_book'
+          ? ROUTES.FaithsCheckBook
+          : ROUTES.MorningAndEvening;
+      case 'treasury_entry':
+        return ROUTES.TreasuryOfDavid;
+    }
+  }
+  // Fallback for callers that don't carry postType.
+  if (item.type === 'article' || item.type === 'blog' || item.type === 'lecture' || item.type === 'conference_media') {
+    return ROUTES.MagazineArticle(item.slug || item.id);
+  }
+  return ROUTES.SermonDetail(item.slug || item.id);
 }
 
 export default function SearchResultCard({ sermon }) {
@@ -28,7 +56,7 @@ export default function SearchResultCard({ sermon }) {
 
   return (
     <Link
-      href={ROUTES.SermonDetail(sermon.slug || sermon.id)}
+      href={resolveHref(sermon)}
       className="group block"
     >
       <div className="py-6 border-b border-border hover:bg-secondary/30 transition-colors -mx-4 px-4 rounded-lg">
@@ -73,7 +101,7 @@ export default function SearchResultCard({ sermon }) {
               )}
             </div>
             <h3 className="font-serif text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
-              {sermon.title}
+              {decodeEntities(sermon.title)}
             </h3>
             {sermon.scripture_reference && (
               <p className="font-sans text-sm text-primary/80 mt-1">
@@ -82,7 +110,7 @@ export default function SearchResultCard({ sermon }) {
             )}
             {sermon.excerpt && (
               <p className="font-sans text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">
-                {sermon.excerpt}
+                {stripHtml(sermon.excerpt)}
               </p>
             )}
             {sermon.topic && (

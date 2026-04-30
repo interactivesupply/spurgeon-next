@@ -1,6 +1,9 @@
 import React from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { BookOpen, Newspaper, FileText, BookMarked, Radio } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import { decodeEntities, stripHtml } from "@/lib/utils";
 
 const categoryMeta = {
   spurgeon_article: { label: "Spurgeon Article", icon: BookOpen, color: "text-amber-700 bg-amber-50 border-amber-200" },
@@ -10,8 +13,14 @@ const categoryMeta = {
   news_reports: { label: "News & Reports", icon: Radio, color: "text-rose-700 bg-rose-50 border-rose-200" },
 };
 
+// WPGraphQL-for-ACF returns select fields as arrays; flatten for display.
+function flat(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
 function ArticleCard({ article, index }) {
-  const meta = categoryMeta[article.category] || categoryMeta.spurgeon_article;
+  const category = flat(article.category);
+  const meta = categoryMeta[category] || categoryMeta.spurgeon_article;
   const Icon = meta.icon;
 
   return (
@@ -19,56 +28,57 @@ function ArticleCard({ article, index }) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.4, delay: index * 0.05 }}
-      className="group bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 flex flex-col"
-    >
-      {article.cover_image_url && (
-        <div className="h-48 overflow-hidden">
-          <img
-            src={article.cover_image_url}
-            alt={article.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          />
-        </div>
-      )}
-      <div className="p-6 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-3">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${meta.color}`}>
-            <Icon className="w-3 h-3" />
-            {meta.label}
-          </span>
-          {article.issue && (
-            <span className="font-sans text-xs text-muted-foreground">{article.issue}</span>
+      transition={{ duration: 0.4, delay: index * 0.05 }}>
+      <Link
+        href={ROUTES.MagazineArticle(article.slug)}
+        className="group block bg-card border border-border rounded-xl overflow-hidden hover:shadow-lg hover:border-primary/20 transition-all duration-300 flex flex-col h-full">
+        {article.cover_image_url && (
+          <div className="h-48 overflow-hidden">
+            <img
+              src={article.cover_image_url}
+              alt={decodeEntities(article.title)}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          </div>
+        )}
+        <div className="p-6 flex flex-col flex-1">
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${meta.color}`}>
+              <Icon className="w-3 h-3" />
+              {meta.label}
+            </span>
+            {article.issue && (
+              <span className="font-sans text-xs text-muted-foreground">{article.issue}</span>
+            )}
+          </div>
+
+          <h3 className="font-serif text-lg font-bold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
+            {decodeEntities(article.title)}
+          </h3>
+
+          {category === "book_review" && article.book_title && (
+            <p className="font-sans text-xs italic text-muted-foreground mb-2">
+              Review of: <span className="font-medium">{decodeEntities(article.book_title)}</span>
+              {article.book_author && ` by ${decodeEntities(article.book_author)}`}
+            </p>
+          )}
+
+          {article.scripture_reference && (
+            <p className="font-sans text-xs text-primary/70 mb-2">{article.scripture_reference}</p>
+          )}
+
+          {article.excerpt && (
+            <p className="font-sans text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
+              {stripHtml(article.excerpt)}
+            </p>
+          )}
+
+          {article.author && (
+            <p className="font-sans text-xs text-muted-foreground/60 mt-4 pt-4 border-t border-border">
+              By {decodeEntities(article.author)}
+            </p>
           )}
         </div>
-
-        <h3 className="font-serif text-lg font-bold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
-          {article.title}
-        </h3>
-
-        {article.category === "book_review" && article.book_title && (
-          <p className="font-sans text-xs italic text-muted-foreground mb-2">
-            Review of: <span className="font-medium">{article.book_title}</span>
-            {article.book_author && ` by ${article.book_author}`}
-          </p>
-        )}
-
-        {article.scripture_reference && (
-          <p className="font-sans text-xs text-primary/70 mb-2">{article.scripture_reference}</p>
-        )}
-
-        {article.excerpt && (
-          <p className="font-sans text-sm text-muted-foreground leading-relaxed line-clamp-3 flex-1">
-            {article.excerpt}
-          </p>
-        )}
-
-        {article.author && (
-          <p className="font-sans text-xs text-muted-foreground/60 mt-4 pt-4 border-t border-border">
-            By {article.author}
-          </p>
-        )}
-      </div>
+      </Link>
     </motion.div>
   );
 }

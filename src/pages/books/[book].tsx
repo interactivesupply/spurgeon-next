@@ -6,6 +6,7 @@ import { apolloClient } from "@/lib/apollo-client";
 import { GET_BOOK_CHAPTERS } from "@/lib/queries";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
+import { decodeEntities } from "@/lib/utils";
 
 const BOOK_META: Record<string, { title: string; metaSlug: string; subtitle: string }> = {
   "all-of-grace": {
@@ -115,7 +116,7 @@ export default function BookReader({ bookSlug, chapters }: BookReaderProps) {
 
             {current && (
               <article>
-                <h2 className="font-serif text-3xl font-bold text-foreground mb-6">{current.title}</h2>
+                <h2 className="font-serif text-3xl font-bold text-foreground mb-6">{decodeEntities(current.title)}</h2>
                 {current.content && (
                   <div
                     className="sermon-content font-charter text-[22px] text-foreground/85 leading-[1.8]"

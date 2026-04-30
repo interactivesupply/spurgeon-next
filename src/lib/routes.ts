@@ -9,6 +9,7 @@ export const ROUTES = {
   TreasuryOfDavid: '/books/treasury-of-david',
   BookReader: (book: string) => `/books/${book}`,
   SwordAndTrowel: '/sword-and-trowel',
+  MagazineArticle: (slug: string) => `/sword-and-trowel/${slug}`,
   Library: '/library',
   DigitalTour: '/library/digital-tour',
 } as const;
