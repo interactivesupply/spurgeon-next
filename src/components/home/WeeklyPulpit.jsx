@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, BookOpen, Sun, FileText, Scroll } from "lucide-react";
 import Link from "next/link";
@@ -37,33 +37,39 @@ const PLACEHOLDER_ARTICLE = {
  *   article: { title, slug, excerpt } | null
  */
 export default function WeeklyPulpit({ devotional, latestSermons = [], article }) {
-  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * QUOTES.length));
+  // Initialize all date- and random-dependent state to a deterministic value
+  // (0 / "") so SSR and CSR agree on the first render. Replace with the real
+  // values after mount via useEffect — that re-render happens client-side
+  // only and avoids hydration mismatches.
+  const [quoteIndex, setQuoteIndex] = useState(0);
   const [todayLabel, setTodayLabel] = useState("");
+  const [todaySublabel, setTodaySublabel] = useState("");
+  const [sermonIdx, setSermonIdx] = useState(0);
+
+  useEffect(() => {
+    setQuoteIndex(Math.floor(Math.random() * QUOTES.length));
+    setTodayLabel(format(new Date(), "EEEE, MMMM d"));
+    setTodaySublabel(format(new Date(), "MMMM d") + " — Morning");
+    if (latestSermons?.length) {
+      setSermonIdx(new Date().getDay() % latestSermons.length);
+    }
+  }, [latestSermons]);
 
   useEffect(() => {
     const t = setInterval(() => setQuoteIndex(i => (i + 1) % QUOTES.length), 8000);
     return () => clearInterval(t);
   }, []);
 
-  // Set the today label client-side so SSR/CSR don't disagree on dates.
-  useEffect(() => {
-    setTodayLabel(format(new Date(), "EEEE, MMMM d"));
-  }, []);
-
   const dev = devotional || PLACEHOLDER_DEVOTIONAL;
   const art = article || PLACEHOLDER_ARTICLE;
 
-  const sermon = useMemo(() => {
-    if (!latestSermons?.length) return null;
-    const idx = new Date().getDay() % latestSermons.length;
-    return latestSermons[idx];
-  }, [latestSermons]);
+  const sermon = latestSermons?.length ? latestSermons[sermonIdx] : null;
 
   const items = [
     {
       key: "devotional",
       label: "Morning & Evening",
-      sublabel: format(new Date(), "MMMM d") + " — Morning",
+      sublabel: todaySublabel,
       icon: Sun,
       iconBg: "bg-amber-50",
       iconColor: "text-amber-600",
