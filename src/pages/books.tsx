@@ -1,132 +1,47 @@
-import React, { useState } from "react";
-import { ROUTES } from "@/lib/routes";
-import { Sun, BookOpen, BookMarked, GraduationCap, DoorOpen, Star, ScrollText, User } from "lucide-react";
+import React, { useState, useMemo } from "react";
+import type { GetStaticProps } from "next";
 import BooksHero from "@/components/books/BooksHero";
 import BookCategoryTabs from "@/components/books/BookCategoryTabs";
 import BookCard from "@/components/books/BookCard";
 import FooterSection from "@/components/home/FooterSection";
+import { apolloClient } from "@/lib/apollo-client";
+import { GET_BOOKS } from "@/lib/queries";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
-const books = [
-  {
-    id: "morning_and_evening",
-    title: "Morning and Evening",
-    category: "Devotional",
-    categoryValue: "devotional",
-    description: "Two devotional readings for every day of the year — one for the morning watch, one for the close of day. Perhaps Spurgeon's most beloved work.",
-    href: ROUTES.MorningAndEvening,
-    icon: Sun,
-    subscribable: true,
-    accentColor: "#526B41",
-    iconBg: "#526B4120",
-    iconColor: "#526B41",
-    categoryColor: "#526B41",
-  },
-  {
-    id: "faiths_check_book",
-    title: "Faith's Check Book",
-    category: "Devotional",
-    categoryValue: "devotional",
-    description: "365 daily promises from Scripture, each opened and applied by Spurgeon — a treasury of divine assurances for every occasion.",
-    href: ROUTES.FaithsCheckBook,
-    icon: BookOpen,
-    subscribable: true,
-    accentColor: "#7a9b5e",
-    iconBg: "#7a9b5e20",
-    iconColor: "#7a9b5e",
-    categoryColor: "#7a9b5e",
-  },
-  {
-    id: "treasury_of_david",
-    title: "The Treasury of David",
-    category: "Biblical Commentary",
-    categoryValue: "commentary",
-    description: "Spurgeon's monumental commentary on all 150 Psalms — exposition, illustrations, and a wealth of quotations from other authors.",
-    href: ROUTES.TreasuryOfDavid,
-    icon: ScrollText,
-    subscribable: false,
-    accentColor: "#664B39",
-    iconBg: "#664B3920",
-    iconColor: "#664B39",
-    categoryColor: "#664B39",
-  },
-  {
-    id: "all_of_grace",
-    title: "All of Grace",
-    category: "Theology & Doctrine",
-    categoryValue: "theology",
-    description: "An earnest word with those who are seeking salvation. A short, powerful presentation of the gospel — free grace for all who come.",
-    href: ROUTES.BookReader("all-of-grace"),
-    icon: Star,
-    subscribable: false,
-    accentColor: "#B29E76",
-    iconBg: "#B29E7620",
-    iconColor: "#8a7a58",
-    categoryColor: "#8a7a58",
-  },
-  {
-    id: "lectures_to_my_students",
-    title: "Lectures to My Students",
-    category: "Pastoral & Practical",
-    categoryValue: "pastoral",
-    description: "Collected addresses to the students of the Pastors' College — practical wisdom on preaching, ministry, and the pastoral life.",
-    href: ROUTES.BookReader("lectures-to-my-students"),
-    icon: GraduationCap,
-    subscribable: false,
-    accentColor: "#526B41",
-    iconBg: "#526B4120",
-    iconColor: "#526B41",
-    categoryColor: "#526B41",
-  },
-  {
-    id: "around_the_wicket_gate",
-    title: "Around the Wicket Gate",
-    category: "Pastoral & Practical",
-    categoryValue: "pastoral",
-    description: "A friendly talk with seekers concerning the gate of salvation — gentle, evangelistic, and searching.",
-    href: ROUTES.BookReader("around-the-wicket-gate"),
-    icon: DoorOpen,
-    subscribable: false,
-    accentColor: "#B29E76",
-    iconBg: "#B29E7620",
-    iconColor: "#8a7a58",
-    categoryColor: "#8a7a58",
-  },
-  {
-    id: "an_all_round_ministry",
-    title: "An All-Round Ministry",
-    category: "Pastoral & Practical",
-    categoryValue: "pastoral",
-    description: "Addresses to ministers and students on the full scope of pastoral work, from Spurgeon's conference sermons.",
-    href: ROUTES.BookReader("an-all-round-ministry"),
-    icon: BookMarked,
-    subscribable: false,
-    accentColor: "#664B39",
-    iconBg: "#664B3920",
-    iconColor: "#664B39",
-    categoryColor: "#664B39",
-  },
-  {
-    id: "autobiography",
-    title: "Autobiography of Charles H. Spurgeon",
-    category: "Autobiographical",
-    categoryValue: "autobiography",
-    description: "Compiled from his diary, letters, and records — the life story of Spurgeon in his own words and those who knew him best.",
-    href: ROUTES.BookReader("autobiography"),
-    icon: User,
-    subscribable: false,
-    accentColor: "#9e8e6e",
-    iconBg: "#9e8e6e20",
-    iconColor: "#7a6e55",
-    categoryColor: "#7a6e55",
-  },
+interface Book {
+  id: string;
+  title: string;
+  category: string;
+  categoryValue: string;
+  description: string;
+  href: string;
+  /** Icon name from the Lucide set (e.g. "Sun", "BookOpen"). BookCard maps this to a component. */
+  icon: string;
+  subscribable: boolean;
+  accentColor: string;
+  iconBg: string;
+  iconColor: string;
+  categoryColor: string;
+}
+
+interface BooksProps {
+  books: Book[];
+  shared: SharedPageData;
+}
+
+// Used as a fallback if WP returns no books.
+const FALLBACK_BOOKS: Book[] = [
+  { id: "morning_and_evening", title: "Morning and Evening", category: "Devotional", categoryValue: "devotional", description: "Two devotional readings for every day of the year.", href: "/books/morning-and-evening", icon: "Sun", subscribable: true, accentColor: "#526B41", iconBg: "#526B4120", iconColor: "#526B41", categoryColor: "#526B41" },
 ];
 
-export default function Books() {
+export default function Books({ books: incomingBooks, shared }: BooksProps) {
   const [activeCategory, setActiveCategory] = useState("all");
+  const books = (incomingBooks?.length ? incomingBooks : FALLBACK_BOOKS);
 
-  const filtered = activeCategory === "all"
-    ? books
-    : books.filter((b) => b.categoryValue === activeCategory);
+  const filtered = useMemo(() =>
+    activeCategory === "all" ? books : books.filter((b) => b.categoryValue === activeCategory),
+    [books, activeCategory]
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,7 +54,42 @@ export default function Books() {
           ))}
         </div>
       </div>
-      <FooterSection />
+      <FooterSection settings={shared.footer} />
     </div>
   );
 }
+
+function flat(value: any): string {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export const getStaticProps: GetStaticProps<BooksProps> = async () => {
+  const shared = await getSharedPageData();
+  let books: Book[] = [];
+
+  try {
+    const { data } = await apolloClient.query({ query: GET_BOOKS });
+    const nodes = (data as any)?.spurgeonBooks?.nodes || [];
+    books = nodes.map((n: any) => {
+      const f = n.spurgeonBookFields || {};
+      return {
+        id: String(n.databaseId),
+        title: n.title,
+        category: f.bookCategoryLabel || '',
+        categoryValue: flat(f.bookCategoryValue) || '',
+        description: f.bookDescription || '',
+        href: f.bookDestinationUrl || `/books/${n.slug}`,
+        icon: flat(f.bookIcon) || 'BookOpen',
+        subscribable: !!f.bookSubscribable,
+        accentColor: f.bookAccentColor || '#526B41',
+        iconBg: f.bookIconBg || '#526B4120',
+        iconColor: f.bookIconColor || '#526B41',
+        categoryColor: f.bookCategoryColor || '#526B41',
+      };
+    });
+  } catch (err: any) {
+    console.error('[GetBooks failed]', err?.message);
+  }
+
+  return { props: { books, shared }, revalidate: 3600 };
+};

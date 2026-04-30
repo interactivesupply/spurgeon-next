@@ -477,6 +477,95 @@ export const GET_LIBRARY_PAGE_CONTENT = gql`
         libVisitExternalLabel
         libVisitExternalUrl
         libVisitMapEmbedUrl
+        libPresEyebrow
+        libPresHeading
+        libPresPhoto { node { sourceUrl altText } }
+        libPresQuote
+        libPresAttribution
+      }
+    }
+    tourStops(first: 10, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        title
+        tourStopFields { stopNumber }
+      }
+    }
+    libraryStaffMembers(first: 50, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        title
+        libraryStaffFields {
+          staffRole
+          staffType
+          staffAffiliation
+          staffUrl
+          staffPhoto { node { sourceUrl altText } }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_TOUR_STOPS = gql`
+  query GetTourStops {
+    tourStops(first: 50, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        tourStopFields {
+          stopNumber
+          subtitle
+          paintingImage { node { sourceUrl altText } }
+          paintingDescription
+          narrative
+          quote
+        }
+      }
+    }
+  }
+`;
+
+export const GET_LIBRARY_STAFF = gql`
+  query GetLibraryStaff {
+    libraryStaffMembers(first: 50, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        id
+        databaseId
+        title
+        libraryStaffFields {
+          staffRole
+          staffType
+          staffAffiliation
+          staffUrl
+          staffPhoto { node { sourceUrl altText } }
+        }
+      }
+    }
+  }
+`;
+
+export const GET_BOOKS = gql`
+  query GetBooks {
+    spurgeonBooks(first: 50, where: { orderby: { field: MENU_ORDER, order: ASC } }) {
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        spurgeonBookFields {
+          bookDescription
+          bookIcon
+          bookCategoryLabel
+          bookCategoryValue
+          bookAccentColor
+          bookIconBg
+          bookIconColor
+          bookCategoryColor
+          bookDestinationUrl
+          bookSubscribable
+          bookChapterFilterSlug
+        }
       }
     }
   }
