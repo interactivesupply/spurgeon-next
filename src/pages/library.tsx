@@ -21,6 +21,7 @@ interface LibraryContent {
   carousel: { src: string; alt: string }[];
   video: { eyebrow: string; heading: string; intro: string; url: string };
   tour: { eyebrow: string; heading: string; body: string; ctaLabel: string };
+  president: { eyebrow: string; heading: string; photo: string | null; quote: string; attribution: string };
   visit: {
     eyebrow: string; heading: string; intro: string;
     locationLines: string; directionsUrl: string;
@@ -32,19 +33,26 @@ interface LibraryContent {
   };
 }
 
-interface LibraryProps {
-  library: LibraryContent;
-  shared: SharedPageData;
+interface TourPreviewStop {
+  num: string;
+  title: string;
 }
 
-const TOUR_PREVIEW_STOPS = [
-  { num: "01", title: "The Conversion" },
-  { num: "02", title: "New Park Street" },
-  { num: "03", title: "The Tabernacle" },
-  { num: "04", title: "The College" },
-  { num: "05", title: "The Orphanage" },
-  { num: "06", title: "The Legacy" },
-];
+interface StaffMember {
+  name: string;
+  role: string;
+  type: string;
+  affiliation: string;
+  url: string;
+  photo: string | null;
+}
+
+interface LibraryProps {
+  library: LibraryContent;
+  tourPreview: TourPreviewStop[];
+  staff: StaffMember[];
+  shared: SharedPageData;
+}
 
 function youtubeId(url: string): string | null {
   if (!url) return null;
@@ -62,7 +70,7 @@ function MultilineText({ text }: { text: string | undefined | null }) {
   ));
 }
 
-export default function Library({ library, shared }: LibraryProps) {
+export default function Library({ library, tourPreview, staff, shared }: LibraryProps) {
   const ytId = youtubeId(library.video.url);
 
   return (
@@ -197,14 +205,14 @@ export default function Library({ library, shared }: LibraryProps) {
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
               className="grid grid-cols-2 gap-3">
-              {TOUR_PREVIEW_STOPS.map((stop) => (
+              {tourPreview.map((stop) => (
                 <Link
                   key={stop.num}
                   href={ROUTES.DigitalTour + `?stop=${stop.num}`}
                   className="p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-sm transition-all group">
                   <p className="font-sans text-xs text-muted-foreground mb-1">Stop {stop.num}</p>
                   <p className="font-serif text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    {stop.title}
+                    {decodeEntities(stop.title)}
                   </p>
                 </Link>
               ))}
@@ -213,7 +221,7 @@ export default function Library({ library, shared }: LibraryProps) {
         </div>
       </div>
 
-      <LibraryStaff />
+      <LibraryStaff staff={staff} president={library.president} />
 
       <div id="visit" className="max-w-5xl mx-auto px-6 py-16 md:py-20">
         <motion.div
@@ -353,6 +361,7 @@ const EMPTY_LIBRARY: LibraryContent = {
   carousel: [],
   video: { eyebrow: '', heading: '', intro: '', url: '' },
   tour: { eyebrow: '', heading: '', body: '', ctaLabel: '' },
+  president: { eyebrow: '', heading: '', photo: null, quote: '', attribution: '' },
   visit: {
     eyebrow: '', heading: '', intro: '',
     locationLines: '', directionsUrl: '',
@@ -365,10 +374,13 @@ const EMPTY_LIBRARY: LibraryContent = {
 export const getStaticProps: GetStaticProps<LibraryProps> = async () => {
   const shared = await getSharedPageData();
   let library: LibraryContent = EMPTY_LIBRARY;
+  let tourPreview: TourPreviewStop[] = [];
+  let staff: StaffMember[] = [];
 
   try {
     const { data } = await apolloClient.query({ query: GET_LIBRARY_PAGE_CONTENT });
-    const f = (data as any)?.page?.libraryPageFields;
+    const d: any = data;
+    const f = d?.page?.libraryPageFields;
     if (f) {
       library = {
         hero: {
@@ -398,6 +410,13 @@ export const getStaticProps: GetStaticProps<LibraryProps> = async () => {
           body: f.libTourBody || '',
           ctaLabel: f.libTourCtaLabel || '',
         },
+        president: {
+          eyebrow: f.libPresEyebrow || '',
+          heading: f.libPresHeading || '',
+          photo: f.libPresPhoto?.node?.sourceUrl || null,
+          quote: f.libPresQuote || '',
+          attribution: f.libPresAttribution || '',
+        },
         visit: {
           eyebrow: f.libVisitEyebrow || '',
           heading: f.libVisitHeading || '',
@@ -414,9 +433,28 @@ export const getStaticProps: GetStaticProps<LibraryProps> = async () => {
         },
       };
     }
+
+    tourPreview = (d?.tourStops?.nodes || [])
+      .slice(0, 6)
+      .map((n: any) => ({
+        num: n.tourStopFields?.stopNumber || '',
+        title: n.title || '',
+      }))
+      .filter((s: any) => s.num && s.title);
+
+    staff = (d?.libraryStaffMembers?.nodes || []).map((n: any) => ({
+      name: n.title || '',
+      role: n.libraryStaffFields?.staffRole || '',
+      type: Array.isArray(n.libraryStaffFields?.staffType)
+        ? n.libraryStaffFields.staffType[0]
+        : n.libraryStaffFields?.staffType || 'director',
+      affiliation: n.libraryStaffFields?.staffAffiliation || '',
+      url: n.libraryStaffFields?.staffUrl || '',
+      photo: n.libraryStaffFields?.staffPhoto?.node?.sourceUrl || null,
+    }));
   } catch (err: any) {
     console.error('[GetLibraryPageContent failed]', err?.message);
   }
 
-  return { props: { library, shared }, revalidate: 3600 };
+  return { props: { library, tourPreview, staff, shared }, revalidate: 3600 };
 };

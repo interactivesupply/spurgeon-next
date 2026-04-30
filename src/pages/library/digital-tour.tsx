@@ -1,97 +1,35 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { ArrowLeft, ArrowRight, QrCode, Compass } from "lucide-react";
 import { AnimatePresence } from "framer-motion";
 import FooterSection from "@/components/home/FooterSection";
 import TourStop from "@/components/library/TourStop";
 import TourQRModal from "@/components/library/TourQRModal";
+import { apolloClient } from "@/lib/apollo-client";
+import { GET_TOUR_STOPS } from "@/lib/queries";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
-const stops = [
-  {
-    id: "01",
-    title: "The Conversion",
-    subtitle: "Colchester, 1850",
-    image: "https://images.unsplash.com/photo-1578926078693-4b7b53f7d2e0?w=900&q=80",
-    paintingDescription: "This painting depicts the interior of the Primitive Methodist chapel in Colchester on a wintry January morning. A young Spurgeon, barely fifteen, sits listening to a lay preacher who points directly at him with words that would alter the course of his life.",
-    narrative: `On January 6, 1850, a blizzard forced the young Charles Spurgeon to take shelter in a small Primitive Methodist chapel on Artillery Street in Colchester. The regular preacher could not attend, and a lay minister — barely educated — rose to preach from Isaiah 45:22: "Look unto me, and be ye saved, all the ends of the earth."
+interface Stop {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string | null;
+  paintingDescription: string;
+  narrative: string;
+  quote: string;
+}
 
-The man, noticing Spurgeon's solemn countenance, pointed at him and said: "Young man, you look very miserable — and you will always be miserable in life and in death if you don't obey my text. But if you obey it now, this moment, you will be saved." Spurgeon later wrote that he "looked," and in an instant the darkness lifted.
+interface DigitalTourProps {
+  stops: Stop[];
+  shared: SharedPageData;
+}
 
-This moment of simple, unadorned gospel preaching shaped Spurgeon's own preaching philosophy for the rest of his life. He would spend forty years calling congregations to "look to Christ" in the same direct, unassuming manner.`,
-    quote: "I did look, and the cloud was gone, the darkness had rolled away, and that moment I saw the sun.",
-  },
-  {
-    id: "02",
-    title: "New Park Street",
-    subtitle: "London, 1854",
-    image: "https://images.unsplash.com/photo-1519070994522-88c6b756330e?w=900&q=80",
-    paintingDescription: "The painting shows the interior of New Park Street Chapel, its galleries overflowing with people straining to hear the teenage preacher whose reputation had spread rapidly through London. Gas lamps cast warm light over upturned faces.",
-    narrative: `In 1854, Spurgeon — just nineteen years old — accepted a trial pastorate at New Park Street Chapel in Southwark, London. The congregation had fallen to a mere eighty or so regular attenders. Within weeks the building was packed to overflowing.
-
-Word spread of the extraordinary young preacher from Cambridge. Thousands came, filling the galleries, the aisles, and spilling out into the streets. The chapel, built for 1,200, could not contain the crowds. Services were moved to Exeter Hall and then to the Surrey Music Hall, which seated 10,000.
-
-Spurgeon's preaching was vivid, direct, and saturated with Scripture. He spoke without notes and with a voice that could reportedly fill any building without amplification. This was the beginning of an unparalleled metropolitan ministry.`,
-    quote: "I would rather speak five words on my knees than five thousand words in the flesh.",
-  },
-  {
-    id: "03",
-    title: "The Metropolitan Tabernacle",
-    subtitle: "London, 1861",
-    image: "https://images.unsplash.com/photo-1548625149-720834f31516?w=900&q=80",
-    paintingDescription: "A sweeping view of the Metropolitan Tabernacle's auditorium on opening day, 1861 — 5,600 seats filled, every eye fixed on the pulpit where Spurgeon stands. The neoclassical columns and tiered galleries speak to a congregation-built monument to gospel preaching.",
-    narrative: `After years of temporary venues, the Metropolitan Tabernacle opened its doors on March 18, 1861, in Newington, South London. Built at a cost of £31,000 — paid entirely from congregational giving — it seated 5,600 with standing room for another thousand.
-
-Spurgeon preached there every Sunday for thirty-one years. The Tabernacle was not merely a church but a ministry hub: it housed the Pastors' College, a colportage association, a ladies' benevolent society, and dozens of mission stations throughout the city.
-
-The building still stands today, rebuilt after a fire in 1898 and a World War II bombing, as a living testament to the ministry Spurgeon planted. The Metropolitan Tabernacle congregation continues to preach the gospel from the same address.`,
-    quote: "The Word of God is like a lion. You don't have to defend a lion. All you have to do is let the lion loose, and the lion will defend itself.",
-  },
-  {
-    id: "04",
-    title: "The Pastors' College",
-    subtitle: "London, 1856",
-    image: "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=900&q=80",
-    paintingDescription: "Spurgeon is depicted at the center of a group of young ministers, seated in a study room lined with books. His posture is relaxed yet engaged — this is the Spurgeon who loved to train and equip, who saw the multiplication of gospel ministers as among his highest callings.",
-    narrative: `What began as Spurgeon tutoring a single student in 1856 grew into the Pastors' College — one of the most influential ministerial training institutions in Victorian England. By the end of Spurgeon's life, over 900 men had been trained and sent out to pastor churches across Britain and around the world.
-
-Spurgeon's philosophy of training was intensely practical. He cared little for academic abstraction and everything for men who could preach the gospel clearly, love their congregations genuinely, and endure hardship faithfully. He funded much of the college himself, from his prodigious writing royalties.
-
-The Annual Conference of the Pastors' College was among the great events of the Victorian Christian calendar — hundreds of former students returning to sit under their beloved president once more. Spurgeon's addresses at these conferences were published as "An All-Round Ministry."`,
-    quote: "Every Christian is either a missionary or an impostor.",
-  },
-  {
-    id: "05",
-    title: "The Stockwell Orphanage",
-    subtitle: "London, 1867",
-    image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=900&q=80",
-    paintingDescription: "Children in Victorian dress gather on the grounds of the Stockwell Orphanage, sunlight falling across the main building. Spurgeon stands among them, a familiar and beloved figure in the lives of hundreds of children who had no other home.",
-    narrative: `In 1867, Spurgeon opened the Stockwell Orphanage, initially for boys and later expanded to include girls. The institution was founded in response to a gift from a widow who wished to see an orphanage built "without a shred of sectarianism." Spurgeon agreed, and the orphanage welcomed children of any denomination.
-
-At its height, the orphanage housed and educated hundreds of children in a purpose-built campus of cottages, each designed to provide a family-like environment rather than the institutional bleakness typical of Victorian charitable homes.
-
-Spurgeon visited regularly, knowing many of the children by name. The orphanage was a tangible embodiment of his belief that genuine Christian faith must express itself in practical compassion. It continued operating for over a century after his death.`,
-    quote: "It is not how much we have, but how much we enjoy, that makes happiness.",
-  },
-  {
-    id: "06",
-    title: "The Final Years & Legacy",
-    subtitle: "Menton, 1892",
-    image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=900&q=80",
-    paintingDescription: "Spurgeon, visibly weary from years of illness, sits beside a window in his villa in Menton, France — the warm Mediterranean light illuminating a worn Bible open on his lap. It is a portrait of a man whose body had given out before his spirit did.",
-    narrative: `In the last decade of his life, Spurgeon suffered greatly from gout, kidney disease, and depression — what he called "the Slough of Despond." He traveled repeatedly to Menton in the south of France for his health, often unable to preach for months at a time.
-
-He died on January 31, 1892, at the age of fifty-seven, in Menton. His body was returned to London, where an estimated 100,000 people filed past his coffin over four days of public viewing. Sixty thousand lined the streets for his funeral procession to West Norwood Cemetery.
-
-His legacy endures in the 63 volumes of the Metropolitan Tabernacle Pulpit, the more than 135 books he authored, the thousands of ministers he trained, and the countless lives transformed by his preaching. The Spurgeon Library at Midwestern Seminary now serves as a center for the ongoing study of his life and theology.`,
-    quote: "I have a great need for Christ; I have a great Christ for my need.",
-  },
-];
-
-export default function DigitalTour() {
+export default function DigitalTour({ stops, shared }: DigitalTourProps) {
   const router = useRouter();
-  const initialStop = (router.query.stop as string) || stops[0].id;
+  const initialStop = (router.query.stop as string) || stops[0]?.id || '01';
   const initialIndex = stops.findIndex(s => s.id === initialStop);
   const [currentIndex, setCurrentIndex] = useState(initialIndex >= 0 ? initialIndex : 0);
   const [qrOpen, setQrOpen] = useState(false);
@@ -114,7 +52,21 @@ export default function DigitalTour() {
       const idx = stops.findIndex(s => s.id === stopParam);
       if (idx >= 0) setCurrentIndex(idx);
     }
-  }, [router.isReady, router.query.stop]);
+  }, [router.isReady, router.query.stop, stops]);
+
+  if (!current) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <Compass className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+          <h2 className="font-serif text-2xl text-foreground mb-2">Tour stops coming soon</h2>
+          <p className="font-sans text-sm text-muted-foreground">
+            The digital gallery tour is being prepared. Please check back later.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,7 +154,30 @@ export default function DigitalTour() {
 
       <TourQRModal open={qrOpen} onClose={() => setQrOpen(false)} stop={current} />
 
-      <FooterSection />
+      <FooterSection settings={shared.footer} />
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps<DigitalTourProps> = async () => {
+  const shared = await getSharedPageData();
+  let stops: Stop[] = [];
+
+  try {
+    const { data } = await apolloClient.query({ query: GET_TOUR_STOPS });
+    const nodes = (data as any)?.tourStops?.nodes || [];
+    stops = nodes.map((n: any) => ({
+      id: n.tourStopFields?.stopNumber || '',
+      title: n.title || '',
+      subtitle: n.tourStopFields?.subtitle || '',
+      image: n.tourStopFields?.paintingImage?.node?.sourceUrl || null,
+      paintingDescription: n.tourStopFields?.paintingDescription || '',
+      narrative: n.tourStopFields?.narrative || '',
+      quote: n.tourStopFields?.quote || '',
+    }));
+  } catch (err: any) {
+    console.error('[GetTourStops failed]', err?.message);
+  }
+
+  return { props: { stops, shared }, revalidate: 3600 };
+};
