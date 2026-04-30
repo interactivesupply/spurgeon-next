@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { decodeEntities } from "@/lib/utils";
 
-const milestones = [
+const DEFAULT_MILESTONES = [
   { year: "1834", title: "Born in Kelvedon, Essex", description: "Charles Haddon Spurgeon was born on June 19, 1834, in Kelvedon, Essex, England, to a Nonconformist minister." },
   { year: "1844", title: "Stays with Grandparents", description: "Spurgeon spent formative years with his grandfather, a Congregationalist pastor, deeply shaping his early faith." },
   { year: "1849", title: "Moves to Newmarket", description: "Spurgeon moved to Newmarket to teach at a school, continuing his voracious reading and self-education in theology." },
@@ -21,7 +22,11 @@ const milestones = [
 
 const DOT_COUNT = 6;
 
-export default function TimelineSection() {
+export default function TimelineSection({ eyebrow, heading, milestones }) {
+  const items = (milestones?.length ? milestones : DEFAULT_MILESTONES);
+  const eb = eyebrow || "A Life of Faithful Ministry";
+  const hd = heading || "The Spurgeon Story";
+
   const scrollRef = useRef(null);
   const [activeDot, setActiveDot] = useState(0);
 
@@ -48,15 +53,15 @@ export default function TimelineSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-20">
           <p className="text-accent font-sans text-sm tracking-[0.3em] uppercase mb-4">
-            A Life of Faithful Ministry
+            {decodeEntities(eb)}
           </p>
-          <h2 className="text-[hsl(var(--card))] text-4xl font-bold md:text-5xl">The Spurgeon Story</h2>
+          <h2 className="text-[hsl(var(--card))] text-4xl font-bold md:text-5xl">{decodeEntities(hd)}</h2>
         </motion.div>
       </div>
 
       <div ref={scrollRef} className="overflow-x-auto pb-6 mt-2 px-6">
-        <div className="flex items-start" style={{ width: `${milestones.length * 200}px` }}>
-          {milestones.map((milestone, index) => (
+        <div className="flex items-start" style={{ width: `${items.length * 200}px` }}>
+          {items.map((milestone, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
@@ -67,7 +72,7 @@ export default function TimelineSection() {
               <div className="flex items-center w-full mb-4">
                 <div className={`flex-1 h-px bg-border ${index === 0 ? "invisible" : ""}`} />
                 <div className="bg-[hsl(var(--accent))] text-black rounded-full w-2.5 h-2.5 flex-shrink-0" />
-                <div className={`flex-1 h-px bg-border ${index === milestones.length - 1 ? "invisible" : ""}`} />
+                <div className={`flex-1 h-px bg-border ${index === items.length - 1 ? "invisible" : ""}`} />
               </div>
 
               <div className="text-center px-3 w-full">
@@ -75,10 +80,10 @@ export default function TimelineSection() {
                   {milestone.year}
                 </span>
                 <h3 className="font-serif text-sm font-semibold text-foreground mt-1 mb-1 leading-snug">
-                  {milestone.title}
+                  {decodeEntities(milestone.title)}
                 </h3>
                 <p className="font-sans text-muted-foreground leading-relaxed text-xs">
-                  {milestone.description}
+                  {decodeEntities(milestone.description)}
                 </p>
               </div>
             </motion.div>
@@ -99,8 +104,7 @@ export default function TimelineSection() {
             }}
             className={`rounded-full transition-all duration-300 ${
               i === activeDot ? "w-4 h-1.5 bg-accent" : "w-1.5 h-1.5 bg-accent/25 hover:bg-accent/50"
-            }`}
-          />
+            }`} />
         ))}
       </div>
     </section>

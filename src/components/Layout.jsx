@@ -100,11 +100,11 @@ export default function Layout({ children }) {
           <div className="flex items-center justify-between h-16 md:h-20">
             <Link href={ROUTES.Home} className="flex items-center group">
               <img
-                src="https://media.base44.com/images/public/699e34d59ad598edd05d1adb/3fc58e03b_logo-cs-horz-top2.png"
+                src="https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png"
                 alt="Spurgeon.org"
                 className="h-10 w-auto object-contain md:hidden" />
               <img
-                src="https://media.base44.com/images/public/699e34d59ad598edd05d1adb/3fc58e03b_logo-cs-horz-top2.png"
+                src="https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png"
                 alt="Spurgeon.org"
                 className="hidden md:block h-16 w-auto object-contain" />
             </Link>

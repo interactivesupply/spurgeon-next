@@ -1,8 +1,20 @@
 import React from "react";
 import { GraduationCap, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { decodeEntities } from "@/lib/utils";
 
-export default function MBTSBanner() {
+const DEFAULTS = {
+  eyebrow: "Midwestern Baptist Theological Seminary",
+  heading: "Study Theology Where Spurgeon Is Celebrated",
+  body: "Deepen your calling through an M.Div or Doctoral program at MBTS — where the Prince of Preachers' legacy shapes pastoral formation. Visit campus and see for yourself.",
+  ctaLabel: "Visit MBTS.edu",
+  ctaUrl: "https://www.mbts.edu/",
+};
+
+export default function MBTSBanner({ content }) {
+  const c = content || {};
+  const v = (k) => c[k] || DEFAULTS[k];
+
   return (
     <section className="py-14 bg-primary/5 border-y border-primary/10">
       <div className="max-w-6xl mx-auto px-6">
@@ -18,25 +30,23 @@ export default function MBTSBanner() {
             </div>
             <div>
               <p className="font-sans text-xs tracking-[0.25em] uppercase text-accent font-semibold mb-1">
-                Midwestern Baptist Theological Seminary
+                {decodeEntities(v('eyebrow'))}
               </p>
               <h3 className="font-serif text-2xl md:text-3xl font-bold text-foreground leading-snug">
-                Study Theology Where Spurgeon Is Celebrated
+                {decodeEntities(v('heading'))}
               </h3>
               <p className="font-sans text-sm text-muted-foreground mt-2 max-w-xl leading-relaxed">
-                Deepen your calling through an M.Div or Doctoral program at MBTS —
-                where the Prince of Preachers' legacy shapes pastoral formation.
-                Visit campus and see for yourself.
+                {decodeEntities(v('body'))}
               </p>
             </div>
           </div>
 
           <a
-            href="https://www.mbts.edu/"
+            href={v('ctaUrl')}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-primary-foreground font-sans text-sm font-semibold hover:bg-primary/90 transition-colors group">
-            Visit MBTS.edu
+            {decodeEntities(v('ctaLabel'))}
             <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
           </a>
         </motion.div>

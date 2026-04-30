@@ -2,9 +2,22 @@ import React from "react";
 import { GraduationCap } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { decodeEntities } from "@/lib/utils";
 import SubscribeModal from "@/components/home/SubscribeModal";
 
-export default function FooterSection() {
+const DEFAULTS = {
+  signatureImage: "https://media.base44.com/images/public/699e34d59ad598edd05d1adb/7241fdd9e_signature-onlyAsset12x.png",
+  aboutText: "Making visible the life, legacy, and library of Charles Haddon Spurgeon. A ministry of Midwestern Baptist Theological Seminary.",
+  quote: "I have a great need for Christ; I have a great Christ for my need.",
+  quoteAuthor: "Charles H. Spurgeon",
+  mbtsPursueLabel: "Pursue an M.Div or Doctorate at MBTS.edu",
+  mbtsPursueUrl: "https://www.mbts.edu/",
+};
+
+export default function FooterSection({ settings }) {
+  const s = settings || {};
+  const v = (k) => s[k] || DEFAULTS[k];
+
   return (
     <div>
       <footer className="bg-foreground text-primary-foreground/70 pt-16 pb-16">
@@ -13,21 +26,20 @@ export default function FooterSection() {
             <div className="md:col-span-2">
               <div className="mb-4">
                 <img
-                  src="https://media.base44.com/images/public/699e34d59ad598edd05d1adb/7241fdd9e_signature-onlyAsset12x.png"
+                  src={v('signatureImage')}
                   alt="C.H. Spurgeon signature"
                   className="h-20 w-auto object-contain opacity-80" />
               </div>
               <p className="font-sans text-sm leading-relaxed text-primary-foreground/50 max-w-sm">
-                Making visible the life, legacy, and library of Charles Haddon
-                Spurgeon. A ministry of Midwestern Baptist Theological Seminary.
+                {decodeEntities(v('aboutText'))}
               </p>
               <a
-                href="https://www.mbts.edu/"
+                href={v('mbtsPursueUrl')}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 mt-5 px-4 py-2 rounded-full border border-primary-foreground/15 text-primary-foreground/60 hover:text-accent hover:border-accent/40 transition-all font-sans text-xs">
                 <GraduationCap className="w-3.5 h-3.5" />
-                Pursue an M.Div or Doctorate at MBTS.edu
+                {decodeEntities(v('mbtsPursueLabel'))}
               </a>
             </div>
 
@@ -60,7 +72,7 @@ export default function FooterSection() {
               © {new Date().getFullYear()} The Spurgeon Center. All rights reserved.
             </p>
             <p className="font-sans text-xs text-primary-foreground/30 italic">
-              "I have a great need for Christ; I have a great Christ for my need."
+              "{decodeEntities(v('quote'))}"
             </p>
           </div>
         </div>

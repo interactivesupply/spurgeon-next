@@ -3,8 +3,28 @@ import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { useRouter } from "next/router";
 import { ROUTES } from "@/lib/routes";
+import { decodeEntities } from "@/lib/utils";
 
-export default function HeroSection() {
+const DEFAULTS = {
+  eyebrow: "The Prince of Preachers",
+  titleTop: "Charles Haddon",
+  titleBottom: "Spurgeon",
+  body: "Explore over 3,500 sermons, lectures, and writings from the most prolific preacher in church history. A treasury of biblical wisdom spanning four decades of faithful ministry.",
+  backgroundImage: "https://media.base44.com/images/public/699e34d59ad598edd05d1adb/414c72abc_53662288261_88a92d9d7f_k.jpg",
+  searchPlaceholder: "Search sermons, scriptures, topics...",
+  quickSearches: ["Grace", "Faith", "Romans 8", "Prayer", "Salvation"],
+};
+
+export default function HeroSection({ content }) {
+  const c = content || {};
+  const eyebrow = c.eyebrow || DEFAULTS.eyebrow;
+  const titleTop = c.titleTop || DEFAULTS.titleTop;
+  const titleBottom = c.titleBottom || DEFAULTS.titleBottom;
+  const body = c.body || DEFAULTS.body;
+  const bgImage = c.backgroundImage || DEFAULTS.backgroundImage;
+  const placeholder = c.searchPlaceholder || DEFAULTS.searchPlaceholder;
+  const quickSearches = (c.quickSearches?.length ? c.quickSearches : DEFAULTS.quickSearches);
+
   const [query, setQuery] = useState("");
   const router = useRouter();
 
@@ -20,10 +40,7 @@ export default function HeroSection() {
       <div className="absolute inset-0 bg-gradient-to-b from-foreground/[1.0] via-foreground/95 to-foreground/85 z-10" />
       <div
         className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage:
-            "url('https://media.base44.com/images/public/699e34d59ad598edd05d1adb/414c72abc_53662288261_88a92d9d7f_k.jpg')"
-        }} />
+        style={{ backgroundImage: `url('${bgImage}')` }} />
 
       <div className="relative z-20 max-w-4xl mx-auto px-6 text-center pt-20 md:pt-16">
         <motion.p
@@ -31,7 +48,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
           className="text-accent font-sans text-sm tracking-[0.3em] uppercase mb-6">
-          The Prince of Preachers
+          {decodeEntities(eyebrow)}
         </motion.p>
 
         <motion.h1
@@ -39,9 +56,9 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.4 }}
           className="font-serif text-5xl md:text-7xl lg:text-8xl font-bold text-primary-foreground leading-[1.05] mb-8">
-          Charles Haddon
+          {decodeEntities(titleTop)}
           <br />
-          <span className="italic font-normal">Spurgeon</span>
+          <span className="italic font-normal">{decodeEntities(titleBottom)}</span>
         </motion.h1>
 
         <motion.p
@@ -49,9 +66,7 @@ export default function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
           className="text-primary-foreground/60 font-sans text-lg md:text-xl max-w-2xl mx-auto mb-12 leading-relaxed font-light">
-          Explore over 3,500 sermons, lectures, and writings from the most
-          prolific preacher in church history. A treasury of biblical wisdom
-          spanning four decades of faithful ministry.
+          {decodeEntities(body)}
         </motion.p>
 
         <motion.form
@@ -68,7 +83,7 @@ export default function HeroSection() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search sermons, scriptures, topics..."
+                placeholder={placeholder}
                 className="flex-1 bg-transparent py-5 px-4 text-primary-foreground placeholder:text-primary-foreground/30 outline-none font-sans text-base" />
               <button
                 type="submit"
@@ -78,7 +93,7 @@ export default function HeroSection() {
             </div>
           </div>
           <div className="flex flex-wrap justify-center gap-3 mt-5">
-            {["Grace", "Faith", "Romans 8", "Prayer", "Salvation"].map((term) => (
+            {quickSearches.map((term) => (
               <button
                 key={term}
                 type="button"

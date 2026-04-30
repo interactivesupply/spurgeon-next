@@ -252,6 +252,118 @@ export const GET_MAGAZINE_ARTICLE = gql`
   }
 `;
 
+export const GET_HOME_PAGE_CONTENT = gql`
+  query GetHomePageContent($month: String!, $day: String!) {
+    spurgeonSettings {
+      siteSettings {
+        footerSignatureImage { node { sourceUrl altText } }
+        footerAboutText
+        footerQuote
+        footerQuoteAuthor
+        footerMbtsPursueLabel
+        footerMbtsPursueUrl
+        mbtsEyebrow
+        mbtsHeading
+        mbtsBody
+        mbtsCtaLabel
+        mbtsCtaUrl
+        timelineEyebrow
+        timelineHeading
+        timelineMilestones {
+          year
+          title
+          description
+        }
+      }
+    }
+    page(id: "home", idType: URI) {
+      homePageFields {
+        heroEyebrow
+        heroTitleTop
+        heroTitleBottom
+        heroBody
+        heroBackgroundImage { node { sourceUrl altText } }
+        heroSearchPlaceholder
+        heroQuickSearches { term }
+        statsItems {
+          number
+          label
+          description
+        }
+        resourcesEyebrow
+        resourcesHeading
+        resourcesIntro
+        resourcesItems {
+          icon
+          count
+          title
+          description
+          searchTerm
+        }
+        libvisitEyebrow
+        libvisitTitleTop
+        libvisitTitleBottom
+        libvisitBody1
+        libvisitBody2
+        libvisitImage { node { sourceUrl altText } }
+        libvisitBadgeNumber
+        libvisitBadgeCaption
+        libvisitLocationLabel
+        libvisitLocationLines
+        libvisitHoursLabel
+        libvisitHoursLines
+        libvisitPrimaryLabel
+        libvisitPrimaryUrl
+        libvisitSecondaryLabel
+        libvisitSecondaryUrl
+      }
+    }
+    todayDevotional: devotionalEntries(
+      first: 1
+      where: {
+        metaQuery: {
+          metaArray: [
+            { key: "devotional", value: "morning_and_evening", compare: EQUAL_TO }
+            { key: "period", value: "morning", compare: EQUAL_TO }
+            { key: "month", value: $month, compare: EQUAL_TO }
+            { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
+          ]
+          relation: AND
+        }
+      }
+    ) {
+      nodes {
+        title
+        content
+        devotionalEntryFields { scripture }
+      }
+    }
+    latestSermons: sermons(first: 10, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes {
+        id
+        title
+        slug
+        excerpt
+        sermonFields { scriptureReference year }
+      }
+    }
+    featuredSermons: sermons(first: 6, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        sermonFields { year notableQuote scriptureReference }
+        sermonCollections { nodes { name } }
+      }
+    }
+    featuredArticle: magazineArticles(first: 1, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes { title slug excerpt }
+    }
+  }
+`;
+
 export const GET_HOME_DATA = gql`
   query GetHomeData($month: String!, $day: String!) {
     todayDevotional: devotionalEntries(
