@@ -200,8 +200,8 @@ export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params }
       props: { sermon },
       revalidate: 3600,
     };
-  } catch (err) {
-    // WordPress unreachable — surface 404 but retry soon.
+  } catch (err: any) {
+    console.error('[GET_SERMON failed]', slug, err?.message, err?.networkError?.statusCode, err?.graphQLErrors);
     return { notFound: true, revalidate: 60 };
   }
 };

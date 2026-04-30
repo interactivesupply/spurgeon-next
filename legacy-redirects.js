@@ -1,0 +1,18 @@
+module.exports = [
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097ae" }], destination: '/sermons/the-power-of-prayer-and-the-pleasure-of-praise', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097ad" }], destination: '/sermons/morning-and-evening', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097ac" }], destination: '/sermons/all-of-grace', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097ab" }], destination: '/sermons/frost-and-thaw', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097aa" }], destination: '/sermons/the-priesthood-of-believers', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097a9" }], destination: '/sermons/grace-abounding', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097a8" }], destination: '/sermons/the-gospel-of-the-glory-of-christ', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097a7" }], destination: '/sermons/immeasurable-love', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097b2" }], destination: '/sermons/the-necessity-of-the-spirits-work', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097b1" }], destination: '/sermons/a-defense-of-calvinism', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097b0" }], destination: '/sermons/compel-them-to-come-in', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "699e365e085b007e285097af" }], destination: '/sermons/faiths-checkbook', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "69ced6b098d4653802233e80" }], destination: '/sermons/salt-without-savor', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "69ced6b098d4653802233e7e" }], destination: '/sermons/the-great-supper', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "69ced6b098d4653802233e7f" }], destination: '/sermons/counting-the-cost', permanent: true },
+  { source: '/SermonDetail', has: [{ type: 'query', key: 'id', value: "69a1e660c0d41535d3f5aecf" }], destination: '/sermons/2025-spurgeon-library-conference-session-1-joel-beeke', permanent: true },
+];
