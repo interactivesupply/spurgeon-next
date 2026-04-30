@@ -412,6 +412,76 @@ export const GET_HOME_DATA = gql`
   }
 `;
 
+export const GET_ABOUT_PAGE_CONTENT = gql`
+  query GetAboutPageContent {
+    page(id: "about", idType: URI) {
+      aboutPageFields {
+        aboutHeroEyebrow
+        aboutHeroTitleTop
+        aboutHeroTitleBottom
+        aboutHeroBody
+        aboutHeroPortrait { node { sourceUrl altText } }
+        aboutHeroPortraitCaption
+        aboutVideoLabel
+        aboutVideoUrl
+        aboutSections {
+          title
+          body
+          quote
+          quoteAuthor
+          floatsPortrait
+        }
+        aboutCaptionPortraitImage { node { sourceUrl altText } }
+        aboutCaptionPortraitCaption
+        aboutCtaHeading
+        aboutCtaBody
+        aboutCtaLabel
+        aboutCtaUrl
+      }
+    }
+  }
+`;
+
+export const GET_LIBRARY_PAGE_CONTENT = gql`
+  query GetLibraryPageContent {
+    page(id: "library", idType: URI) {
+      libraryPageFields {
+        libHeroEyebrow
+        libHeroTitleTop
+        libHeroTitleBottom
+        libHeroBody
+        libHeroBackground { node { sourceUrl altText } }
+        libHeroPrimaryLabel
+        libHeroSecondaryLabel
+        libCarouselImages {
+          image { node { sourceUrl altText } }
+          alt
+        }
+        libVideoEyebrow
+        libVideoHeading
+        libVideoIntro
+        libVideoUrl
+        libTourEyebrow
+        libTourHeading
+        libTourBody
+        libTourCtaLabel
+        libVisitEyebrow
+        libVisitHeading
+        libVisitIntro
+        libVisitLocationLines
+        libVisitDirectionsUrl
+        libVisitHours { label value }
+        libVisitHoursNote
+        libVisitPhone
+        libVisitEmail
+        libVisitExternalLabel
+        libVisitExternalUrl
+        libVisitMapEmbedUrl
+      }
+    }
+  }
+`;
+
 export const FIND_SERMON_BY_BASE44_ID = gql`
   query FindSermonByLegacyId($base44Id: String!) {
     sermons(
