@@ -34,3 +34,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated docs (PDFs from CONTENT_MANAGEMENT.md etc.) — regenerate via
+# `npx md-to-pdf <file>.md` whenever you need a fresh copy
+*.pdf
