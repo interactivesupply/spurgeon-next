@@ -52,7 +52,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   const now = new Date();
   const variables = {
     month: MONTHS[now.getMonth()],
-    day: now.getDate(),
+    day: String(now.getDate()),
   };
 
   try {

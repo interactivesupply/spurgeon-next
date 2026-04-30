@@ -3,23 +3,27 @@ import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 const wpUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL || '';
 
 /**
- * Optional HTTP Basic Auth for the WordPress install.
- * These vars are intentionally NOT prefixed with NEXT_PUBLIC_ — they're
- * available only during SSR/SSG/API-route execution, never bundled into
- * the client JavaScript. Browser-side queries (useQuery/useLazyQuery) will
- * NOT include the credentials, which is correct: WordPress basic auth
- * should be removed on the install before browser-side queries can work.
+ * Two-mode HTTP link:
+ * - Server-side (SSR/SSG/API routes): hits WordPress directly with basic
+ *   auth from server-only env vars.
+ * - Browser: hits our own /api/graphql proxy, which forwards to WordPress
+ *   with the basic auth header attached server-side. No credentials in
+ *   client JS, no CORS issues with the basic auth gate.
+ *
+ * Once the production WP install no longer requires basic auth, the
+ * proxy still works fine — it's just a passthrough.
  */
-const basicAuthUser = process.env.WORDPRESS_BASIC_AUTH_USER;
-const basicAuthPassword = process.env.WORDPRESS_BASIC_AUTH_PASSWORD;
-const basicAuthHeader =
-  basicAuthUser && basicAuthPassword && typeof window === 'undefined'
-    ? 'Basic ' + Buffer.from(`${basicAuthUser}:${basicAuthPassword}`).toString('base64')
-    : null;
+const isServer = typeof window === 'undefined';
+
+const ssrUser = process.env.WORDPRESS_BASIC_AUTH_USER;
+const ssrPass = process.env.WORDPRESS_BASIC_AUTH_PASSWORD;
+const ssrAuthHeader = isServer && ssrUser && ssrPass
+  ? 'Basic ' + Buffer.from(`${ssrUser}:${ssrPass}`).toString('base64')
+  : null;
 
 const httpLink = createHttpLink({
-  uri: `${wpUrl}/graphql`,
-  headers: basicAuthHeader ? { Authorization: basicAuthHeader } : {},
+  uri: isServer ? `${wpUrl}/graphql` : '/api/graphql',
+  headers: ssrAuthHeader ? { Authorization: ssrAuthHeader } : {},
 });
 
 export const apolloClient = new ApolloClient({
@@ -29,5 +33,5 @@ export const apolloClient = new ApolloClient({
     query: { fetchPolicy: 'cache-first' },
     watchQuery: { fetchPolicy: 'cache-first' },
   },
-  ssrMode: typeof window === 'undefined',
+  ssrMode: isServer,
 });

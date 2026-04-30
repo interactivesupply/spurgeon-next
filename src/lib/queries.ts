@@ -93,11 +93,39 @@ export const SPURGEON_SEARCH = gql`
   }
 `;
 
+export const GET_FCB_ENTRY = gql`
+  query GetFCBEntry($month: String!, $day: String!) {
+    devotionalEntries(
+      first: 1
+      where: {
+        metaQuery: {
+          metaArray: [
+            { key: "devotional", value: "faiths_check_book", compare: EQUAL_TO }
+            { key: "month", value: $month, compare: EQUAL_TO }
+            { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
+          ]
+          relation: AND
+        }
+      }
+    ) {
+      nodes {
+        title
+        content
+        devotionalEntryFields {
+          scripture
+          month
+          day
+        }
+      }
+    }
+  }
+`;
+
 export const GET_DEVOTIONAL_ENTRY = gql`
   query GetDevotionalEntry(
     $devotional: String!
     $month: String!
-    $day: Int!
+    $day: String!
     $period: String
   ) {
     devotionalEntries(
@@ -130,7 +158,7 @@ export const GET_DEVOTIONAL_ENTRY = gql`
 `;
 
 export const GET_TREASURY_VERSES = gql`
-  query GetTreasuryVerses($psalm: Int!) {
+  query GetTreasuryVerses($psalm: String!) {
     treasuryEntries(
       first: 200
       where: {
@@ -216,7 +244,7 @@ export const GET_BOOK_CHAPTERS = gql`
 `;
 
 export const GET_HOME_DATA = gql`
-  query GetHomeData($month: String!, $day: Int!) {
+  query GetHomeData($month: String!, $day: String!) {
     todayDevotional: devotionalEntries(
       first: 1
       where: {

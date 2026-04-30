@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
-import { GET_DEVOTIONAL_ENTRY } from "@/lib/queries";
+import { GET_FCB_ENTRY } from "@/lib/queries";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
@@ -19,18 +19,11 @@ export default function FaithsCheckBook() {
   const [month, setMonth] = useState(initMonth);
   const [day, setDay] = useState(initDay);
 
-  const [fetchEntry, { data, loading }] = useLazyQuery(GET_DEVOTIONAL_ENTRY);
+  const [fetchEntry, { data, loading }] = useLazyQuery(GET_FCB_ENTRY);
   const entry: any = (data as any)?.devotionalEntries?.nodes?.[0];
 
   useEffect(() => {
-    fetchEntry({
-      variables: {
-        devotional: "faiths_check_book",
-        month,
-        day,
-        period: null,
-      },
-    });
+    fetchEntry({ variables: { month, day: String(day) } });
   }, [month, day, fetchEntry]);
 
   const daysInMonth = new Date(2024, MONTHS.indexOf(month) + 1, 0).getDate();

@@ -16,7 +16,7 @@ export default function TreasuryOfDavid() {
   const verses: any[] = (data as any)?.treasuryEntries?.nodes || [];
 
   useEffect(() => {
-    fetchVerses({ variables: { psalm } });
+    fetchVerses({ variables: { psalm: String(psalm) } });
     setSelectedVerse(null);
   }, [psalm, fetchVerses]);
 

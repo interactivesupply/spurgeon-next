@@ -28,7 +28,7 @@ export default function MorningAndEvening() {
       variables: {
         devotional: "morning_and_evening",
         month,
-        day,
+        day: String(day),
         period,
       },
     });
