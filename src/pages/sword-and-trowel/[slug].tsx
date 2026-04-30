@@ -4,6 +4,7 @@ import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_MAGAZINE_ARTICLE } from "@/lib/queries";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import { ArrowLeft, Newspaper, BookOpen, Calendar } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
@@ -20,9 +21,10 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 interface ArticlePageProps {
   article: any | null;
+  shared: SharedPageData;
 }
 
-export default function MagazineArticlePage({ article }: ArticlePageProps) {
+export default function MagazineArticlePage({ article, shared }: ArticlePageProps) {
   if (!article) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -112,7 +114,7 @@ export default function MagazineArticlePage({ article }: ArticlePageProps) {
             dangerouslySetInnerHTML={{ __html: article.content }} />
         )}
       </motion.div>
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
@@ -123,6 +125,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params }) => {
   const slug = params?.slug as string;
+  const shared = await getSharedPageData();
   try {
     const { data } = await apolloClient.query({
       query: GET_MAGAZINE_ARTICLE,
@@ -133,7 +136,7 @@ export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params 
       return { notFound: true, revalidate: 60 };
     }
     return {
-      props: { article },
+      props: { article, shared },
       revalidate: 1800,
     };
   } catch (err: any) {

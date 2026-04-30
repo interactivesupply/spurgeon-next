@@ -4,6 +4,7 @@ import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_BOOK_CHAPTERS } from "@/lib/queries";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { decodeEntities } from "@/lib/utils";
@@ -39,9 +40,10 @@ const BOOK_META: Record<string, { title: string; metaSlug: string; subtitle: str
 interface BookReaderProps {
   bookSlug: string;
   chapters: any[];
+  shared: SharedPageData;
 }
 
-export default function BookReader({ bookSlug, chapters }: BookReaderProps) {
+export default function BookReader({ bookSlug, chapters, shared }: BookReaderProps) {
   const [chapterIdx, setChapterIdx] = useState(0);
   const meta = BOOK_META[bookSlug];
 
@@ -128,7 +130,7 @@ export default function BookReader({ bookSlug, chapters }: BookReaderProps) {
         )}
       </div>
 
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
@@ -145,6 +147,7 @@ export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params }
   const meta = BOOK_META[bookSlug];
   if (!meta) return { notFound: true };
 
+  const shared = await getSharedPageData();
   try {
     const { data } = await apolloClient.query({
       query: GET_BOOK_CHAPTERS,
@@ -154,12 +157,13 @@ export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params }
       props: {
         bookSlug,
         chapters: (data as any)?.bookChapters?.nodes || [],
+        shared,
       },
       revalidate: 86400,
     };
   } catch {
     return {
-      props: { bookSlug, chapters: [] },
+      props: { bookSlug, chapters: [], shared },
       revalidate: 60,
     };
   }

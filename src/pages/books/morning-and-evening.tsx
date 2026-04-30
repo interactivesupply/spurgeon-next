@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
 import { GET_DEVOTIONAL_ENTRY } from "@/lib/queries";
 import { ArrowLeft, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -15,7 +17,11 @@ function todayKey() {
   return { month: MONTHS[d.getMonth()], day: d.getDate() };
 }
 
-export default function MorningAndEvening() {
+interface PageProps {
+  shared: SharedPageData;
+}
+
+export default function MorningAndEvening({ shared }: PageProps) {
   const { month: initMonth, day: initDay } = todayKey();
   const [month, setMonth] = useState(initMonth);
   const [day, setDay] = useState(initDay);
@@ -156,7 +162,12 @@ export default function MorningAndEvening() {
           periods={["morning", "evening", "both"]} />
       </div>
 
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps<PageProps> = async () => {
+  const shared = await getSharedPageData();
+  return { props: { shared }, revalidate: 3600 };
+};

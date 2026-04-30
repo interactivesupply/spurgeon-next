@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import type { GetStaticProps } from "next";
 import { useQuery } from "@apollo/client/react";
 import { GET_MAGAZINE_ARTICLES } from "@/lib/queries";
 import { useRouter } from "next/router";
@@ -7,6 +8,7 @@ import EditionSelector from "@/components/magazine/EditionSelector";
 import MagazineCategories from "@/components/magazine/MagazineCategories";
 import ArticleGrid from "@/components/magazine/ArticleGrid";
 import FooterSection from "@/components/home/FooterSection";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
 // Flatten ACF select fields (which arrive as arrays from WPGraphQL-for-ACF)
 function flat(value: any) {
@@ -35,7 +37,11 @@ function reshape(node: any) {
   };
 }
 
-export default function SwordAndTrowel() {
+interface SwordAndTrowelProps {
+  shared: SharedPageData;
+}
+
+export default function SwordAndTrowel({ shared }: SwordAndTrowelProps) {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [activeEdition, setActiveEdition] = useState<string | null>(null);
@@ -111,7 +117,12 @@ export default function SwordAndTrowel() {
         </div>
       </div>
       <ArticleGrid articles={filtered} isLoading={loading} />
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps<SwordAndTrowelProps> = async () => {
+  const shared = await getSharedPageData();
+  return { props: { shared }, revalidate: 1800 };
+};

@@ -4,6 +4,7 @@ import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_SERMON, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
@@ -22,6 +23,7 @@ const COLLECTION_LABEL: Record<string, string> = {
 
 interface SermonPageProps {
   sermon: any | null;
+  shared: SharedPageData;
 }
 
 function PullQuote({ text }: { text: string }) {
@@ -36,7 +38,7 @@ function PullQuote({ text }: { text: string }) {
   );
 }
 
-export default function SermonDetailPage({ sermon }: SermonPageProps) {
+export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
   if (!sermon) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -174,7 +176,7 @@ export default function SermonDetailPage({ sermon }: SermonPageProps) {
             dangerouslySetInnerHTML={{ __html: sermon.content }} />
         )}
       </motion.div>
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
@@ -188,6 +190,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 
 export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params }) => {
   const slug = params?.slug as string;
+  const shared = await getSharedPageData();
   try {
     const { data } = await apolloClient.query({
       query: GET_SERMON,
@@ -198,7 +201,7 @@ export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params }
       return { notFound: true, revalidate: 60 };
     }
     return {
-      props: { sermon },
+      props: { sermon, shared },
       revalidate: 3600,
     };
   } catch (err: any) {

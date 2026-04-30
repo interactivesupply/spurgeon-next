@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import type { GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
 import { algolia, ALGOLIA_INDEX, reshapeHit, type ReshapedHit } from "@/lib/algolia";
 import { Search as SearchIcon, BookOpen, X } from "lucide-react";
 import SearchFilters from "@/components/search/SearchFilters";
 import SearchResultCard from "@/components/search/SearchResultCard";
 import FooterSection from "@/components/home/FooterSection";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
 const TYPE_TO_POST_TYPES: Record<string, string[]> = {
   sermon: ["spurgeon_sermon"],
@@ -42,7 +44,11 @@ const EMPTY_FILTERS: FilterState = {
   years: [],
 };
 
-export default function SearchPage() {
+interface SearchPageProps {
+  shared: SharedPageData;
+}
+
+export default function SearchPage({ shared }: SearchPageProps) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
@@ -281,7 +287,12 @@ export default function SearchPage() {
         </p>
       </div>
 
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps<SearchPageProps> = async () => {
+  const shared = await getSharedPageData();
+  return { props: { shared }, revalidate: 3600 };
+};

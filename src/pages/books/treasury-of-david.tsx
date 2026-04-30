@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
 import { GET_TREASURY_VERSES } from "@/lib/queries";
 import { ArrowLeft, ScrollText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
+import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
 const PSALMS = Array.from({ length: 150 }, (_, i) => i + 1);
 
-export default function TreasuryOfDavid() {
+interface PageProps {
+  shared: SharedPageData;
+}
+
+export default function TreasuryOfDavid({ shared }: PageProps) {
   const [psalm, setPsalm] = useState(1);
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
 
@@ -130,7 +136,12 @@ export default function TreasuryOfDavid() {
         </div>
       </div>
 
-      <FooterSection />
+      <FooterSection settings={shared?.footer} />
     </div>
   );
 }
+
+export const getStaticProps: GetStaticProps<PageProps> = async () => {
+  const shared = await getSharedPageData();
+  return { props: { shared }, revalidate: 3600 };
+};
