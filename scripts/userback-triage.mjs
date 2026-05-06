@@ -9,8 +9,10 @@
  *   set-status <id> <status>   Update an item's workflow
  *                              status: open | in-progress | under-review |
  *                                      needs-discussion | resolved
+ *   comment <id> <text...>     Post a comment on an item (everything after
+ *                              the id is joined as the comment body)
  *
- * Run via:  npm run triage [-- list|get|set-status …]
+ * Run via:  npm run triage [-- list|get|set-status|comment …]
  *
  * Requires USERBACK_API_TOKEN in .env.local (already wired via
  * --env-file=.env.local in the npm script).
@@ -23,6 +25,16 @@ if (!TOKEN) {
 }
 
 const PROJECT_ID = 140589; // Spurgeon Center
+
+// Author for comments posted via this CLI. Userback's POST /feedback/comment
+// rejects the request with 400 unless the body identifies the author —
+// either as a workspace member (userId) or an external commenter (guestName
+// + guestEmail). 63047 is the "Dev Team" admin member on this workspace
+// (support@interactivesupply.com); it's the user that generated this token.
+// Look up via:
+//   curl -H "Authorization: Bearer $USERBACK_API_TOKEN" \
+//     https://rest.userback.io/1.0/member
+const COMMENT_AUTHOR_USER_ID = 63047;
 
 // Workflow IDs for the Spurgeon project. Discovered once via the workflow
 // endpoint; baked in here so we don't pay an extra round trip per command.
@@ -99,6 +111,22 @@ async function getItem(id) {
   console.log(JSON.stringify(i, null, 2));
 }
 
+async function postComment(id, body) {
+  const text = (body || '').trim();
+  if (!text) throw new Error('comment body is empty');
+  // Comments live at /feedback/comment (sub-path of /feedback). The GET
+  // shape uses { feedbackId, comment, ... } so the POST mirrors that.
+  const created = await api('/feedback/comment', {
+    method: 'POST',
+    body: JSON.stringify({
+      feedbackId: Number(id),
+      userId: COMMENT_AUTHOR_USER_ID,
+      comment: text,
+    }),
+  });
+  console.log(`#${id}  comment posted${created?.id ? ` (comment id ${created.id})` : ''}`);
+}
+
 async function setStatus(id, statusName) {
   const statusId = statusIdFromName(statusName);
   const updated = await api(`/feedback/${id}`, {
@@ -126,6 +154,11 @@ try {
     const status = argv[2];
     if (!id || !status) throw new Error('usage: triage set-status <id> <status>');
     await setStatus(id, status);
+  } else if (cmd === 'comment') {
+    const id = argv[1];
+    const body = argv.slice(2).join(' ');
+    if (!id || !body) throw new Error('usage: triage comment <id> <text...>');
+    await postComment(id, body);
   } else if (cmd === '--help' || cmd === '-h' || cmd === 'help') {
     console.log(`
 Usage:
@@ -133,6 +166,7 @@ Usage:
   npm run triage -- list --status resolved       # list resolved
   npm run triage -- get <id>                     # full detail
   npm run triage -- set-status <id> <status>     # change workflow
+  npm run triage -- comment <id> <text...>       # post a comment
 
 Statuses: ${Object.keys(STATUS).join(', ')}
 `.trim());
