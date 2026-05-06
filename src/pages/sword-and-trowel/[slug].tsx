@@ -6,7 +6,7 @@ import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_MAGAZINE_ARTICLE, GET_MAGAZINE_ARTICLE_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
-import { ArrowLeft, Newspaper, BookOpen, Calendar } from "lucide-react";
+import { ArrowLeft, Newspaper, BookOpen, Calendar, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
@@ -101,19 +101,21 @@ export default function MagazineArticlePage({ article, shared }: ArticlePageProp
           </div>
         )}
 
-        {article.excerpt && (
-          <div className="mb-6">
-            <div className="font-sans text-muted-foreground leading-relaxed text-base"
-              dangerouslySetInnerHTML={{ __html: article.excerpt }} />
-          </div>
-        )}
-
         <div className="h-px bg-border mb-8" />
 
-        {article.content && (
-          <div
-            className="sermon-content font-charter text-[22px] text-foreground/90 leading-[1.8]"
-            dangerouslySetInnerHTML={{ __html: article.content }} />
+        {fields.pdfUrl ? (
+          <a
+            href={fields.pdfUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-sans text-sm font-medium">
+            <FileText className="w-4 h-4" />
+            Download PDF
+          </a>
+        ) : (
+          <p className="font-sans text-sm text-muted-foreground italic">
+            PDF not yet available for this issue.
+          </p>
         )}
       </motion.div>
       <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />

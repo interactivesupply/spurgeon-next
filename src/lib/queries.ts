@@ -627,8 +627,6 @@ export const GET_MAGAZINE_ARTICLE = gql`
       databaseId
       title
       slug
-      content
-      excerpt
       magazineCategories { nodes { slug name } }
       magazineArticleFields {
         author
@@ -637,6 +635,7 @@ export const GET_MAGAZINE_ARTICLE = gql`
         scriptureReference
         bookTitle
         bookAuthor
+        pdfUrl
       }
     }
   }
@@ -649,8 +648,6 @@ export const GET_MAGAZINE_ARTICLE_BY_ID = gql`
       databaseId
       title
       slug
-      content
-      excerpt
       magazineCategories { nodes { slug name } }
       magazineArticleFields {
         author
@@ -659,6 +656,7 @@ export const GET_MAGAZINE_ARTICLE_BY_ID = gql`
         scriptureReference
         bookTitle
         bookAuthor
+        pdfUrl
       }
     }
   }
