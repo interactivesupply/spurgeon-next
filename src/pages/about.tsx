@@ -212,7 +212,7 @@ export default function About({ about, shared }: AboutProps) {
         eyebrow={shared.timeline.eyebrow}
         heading={shared.timeline.heading}
         milestones={shared.timeline.milestones} />
-      <FooterSection settings={shared.footer} />
+      <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
     </div>
   );
 }

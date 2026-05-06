@@ -51,7 +51,7 @@ function MobileMenuSection({ label, icon: Icon, sections, onClose }) {
   );
 }
 
-export default function Layout({ children }) {
+export default function Layout({ children, nav }) {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -110,22 +110,26 @@ export default function Layout({ children }) {
             </Link>
 
             <nav className="hidden md:flex items-center gap-8">
-              <SpurgeonWorksMenu />
-              <Link
-                href={ROUTES.About}
-                className={`font-sans text-sm transition-colors ${
-                  isAbout ? "text-accent" : "text-primary-foreground/60 hover:text-primary-foreground"
-                }`}>
-                About Spurgeon
-              </Link>
-              <CenterResourcesMenu />
-              <Link
-                href={ROUTES.Library}
-                className={`font-sans text-sm transition-colors ${
-                  isLibrary ? "text-accent" : "text-primary-foreground/60 hover:text-primary-foreground"
-                }`}>
-                Visit the Library
-              </Link>
+              <SpurgeonWorksMenu columns={nav?.headerSpurgeonWorks} />
+              <CenterResourcesMenu columns={nav?.headerCenterResources} />
+              {/* Inline editor-managed top-level links (About, Library, etc.).
+                  Falls back to a couple of sensible defaults if empty. */}
+              {(nav?.headerInlineLinks?.length
+                ? nav.headerInlineLinks
+                : [{ label: 'About Spurgeon', url: ROUTES.About }, { label: 'Visit the Library', url: ROUTES.Library }]
+              ).map((link) => {
+                const active = router.asPath === link.url || router.pathname === link.url;
+                return (
+                  <Link
+                    key={link.url + link.label}
+                    href={link.url}
+                    className={`font-sans text-sm transition-colors ${
+                      active ? "text-accent" : "text-primary-foreground/60 hover:text-primary-foreground"
+                    }`}>
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
 
             <div className="flex items-center gap-3">

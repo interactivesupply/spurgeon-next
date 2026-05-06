@@ -10,6 +10,11 @@ export const ROUTES = {
   BookReader: (book: string) => `/books/${book}`,
   SwordAndTrowel: '/sword-and-trowel',
   MagazineArticle: (slug: string) => `/sword-and-trowel/${slug}`,
+  Blog: '/blog',
+  BlogPost: (slug: string) => `/blog/${slug}`,
+  Articles: '/articles',
+  Article: (slug: string) => `/articles/${slug}`,
+  ConferenceMediaItem: (slug: string) => `/conference-media/${slug}`,
   Library: '/library',
   DigitalTour: '/library/digital-tour',
 } as const;

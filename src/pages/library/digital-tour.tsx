@@ -8,7 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import FooterSection from "@/components/home/FooterSection";
 import TourStop from "@/components/library/TourStop";
 import TourQRModal from "@/components/library/TourQRModal";
-import { apolloClient } from "@/lib/apollo-client";
+import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_TOUR_STOPS, GET_TOUR_STOP_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
@@ -154,7 +154,7 @@ export default function DigitalTour({ stops, shared }: DigitalTourProps) {
 
       <TourQRModal open={qrOpen} onClose={() => setQrOpen(false)} stop={current} />
 
-      <FooterSection settings={shared.footer} />
+      <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
     </div>
   );
 }
@@ -189,7 +189,7 @@ export const getStaticProps: GetStaticProps<DigitalTourProps> = async ({ preview
     : null;
   if (previewId) {
     try {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloPreviewClient().query({
         query: GET_TOUR_STOP_BY_ID,
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',

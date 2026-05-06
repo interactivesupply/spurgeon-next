@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import type { GetStaticProps } from "next";
-import { useQuery } from "@apollo/client/react";
-import { GET_MAGAZINE_ARTICLES } from "@/lib/queries";
+import { gql } from "@apollo/client";
 import { useRouter } from "next/router";
 import MagazineHero from "@/components/magazine/MagazineHero";
 import EditionSelector from "@/components/magazine/EditionSelector";
@@ -9,43 +8,76 @@ import MagazineCategories from "@/components/magazine/MagazineCategories";
 import ArticleGrid from "@/components/magazine/ArticleGrid";
 import FooterSection from "@/components/home/FooterSection";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
+import { algolia, ALGOLIA_INDEX } from "@/lib/algolia";
+import { apolloClient } from "@/lib/apollo-client";
 
-// Flatten ACF select fields (which arrive as arrays from WPGraphQL-for-ACF)
-function flat(value: any) {
-  return Array.isArray(value) ? value[0] : value;
+/**
+ * Reshape a magazine_article Algolia hit into the flat shape ArticleGrid
+ * expects. Field names mirror the original Base44 entity shape so the
+ * existing ArticleGrid / EditionSelector / MagazineCategories components
+ * don't need to know about WordPress or Algolia internals.
+ */
+function reshapeAlgolia(hit: any) {
+  // Slug = last path segment of the WP permalink.
+  const slug = (() => {
+    try {
+      const path = new URL(hit.permalink).pathname.replace(/\/$/, '');
+      const parts = path.split('/').filter(Boolean);
+      return parts[parts.length - 1] || '';
+    } catch { return ''; }
+  })();
+  return {
+    id: hit.objectID,
+    databaseId: hit.post_id,
+    slug,
+    title: hit.post_title,
+    excerpt: hit.post_excerpt || '',
+    category: hit.category || '',
+    author: hit.author || '',
+    issue: hit.issue || '',
+    cover_image_url: hit.cover_image_url || '',
+    scripture_reference: hit.scripture_reference || '',
+    book_title: hit.book_title || '',
+    book_author: hit.book_author || '',
+  };
 }
 
-// Reshape a magazineArticles GraphQL node into the flat shape ArticleGrid
-// expects. Mirrors the original Base44 entity shape, so the existing
-// ArticleGrid / EditionSelector / MagazineCategories components don't need
-// to know about the WordPress field structure.
-function reshape(node: any) {
-  const f = node.magazineArticleFields || {};
-  return {
-    id: node.id,
-    databaseId: node.databaseId,
-    slug: node.slug,
-    title: node.title,
-    excerpt: node.excerpt,
-    category: flat(f.category),
-    author: f.author,
-    issue: f.issue,
-    cover_image_url: f.coverImageUrl,
-    scripture_reference: f.scriptureReference,
-    book_title: f.bookTitle,
-    book_author: f.bookAuthor,
-  };
+// Tiny standalone query for the dynamic Categories tabs. Fetched once at
+// build time (via getStaticProps) and passed as a prop, so the SSR HTML
+// already includes the tab list — no client round-trip needed for labels.
+// Editors can add/rename terms in wp-admin; ISR refreshes them.
+const GET_MAGAZINE_CATEGORY_TERMS = gql`
+  query GetMagazineCategoryTerms {
+    magazineCategories(first: 50) {
+      nodes { slug name }
+    }
+  }
+`;
+
+interface CategoryTerm {
+  slug: string;
+  name: string;
 }
 
 interface SwordAndTrowelProps {
   shared: SharedPageData;
+  categoryTerms: CategoryTerm[];
 }
 
-export default function SwordAndTrowel({ shared }: SwordAndTrowelProps) {
+export default function SwordAndTrowel({ shared, categoryTerms }: SwordAndTrowelProps) {
   const router = useRouter();
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [activeEdition, setActiveEdition] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hits, setHits] = useState<any[]>([]);
+  // Per-category counts. Keys are taxonomy slugs ("spurgeon_article" etc.).
+  // Values reflect "how many magazine articles would this tab show, given
+  // the current edition + query but ignoring the current category" — i.e.
+  // disjunctive faceting on the category dimension.
+  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  // Total hits ignoring category filter — used as the "All" tab count.
+  const [totalForAll, setTotalForAll] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // Hydrate filters from URL on mount (so menu links like
   // /sword-and-trowel?category=book_review work).
@@ -55,34 +87,73 @@ export default function SwordAndTrowel({ shared }: SwordAndTrowelProps) {
     setActiveCategory(c);
   }, [router.isReady, router.query.category]);
 
-  // Fetch all articles up front and filter client-side. Volume is small;
-  // EditionSelector iterates 1865→present and works best with the full list.
-  const { data, loading } = useQuery(GET_MAGAZINE_ARTICLES, {
-    variables: { first: 500, search: null },
-  });
-  const articles = useMemo(
-    () => ((data as any)?.magazineArticles?.nodes || []).map(reshape),
-    [data]
+  // categoryTerms comes from getStaticProps (server-side fetched), so they
+  // appear in the initial HTML and are immediately ready for hydration.
+
+  /**
+   * Run an Algolia search scoped to magazine_article. Two requests:
+   *   1. Main — full filters → returns the visible hits.
+   *   2. Disjunctive on `category` — drops the category filter and asks for
+   *      the `category` facet → returns counts each category would show.
+   * The post_type lock is unconditional on both so this page can never
+   * accidentally surface non-magazine content.
+   */
+  const runSearch = useCallback(
+    async (q: string, edition: string | null, category: string) => {
+      if (!algolia) return;
+      setLoading(true);
+
+      const baseFilters: string[][] = [["post_type:magazine_article"]];
+      if (edition) baseFilters.push([`issue:${edition}`]);
+
+      const mainFilters = [...baseFilters];
+      if (category && category !== "all") mainFilters.push([`category:${category}`]);
+
+      try {
+        const { results } = await algolia.search({
+          requests: [
+            // Main: visible hits.
+            {
+              indexName: ALGOLIA_INDEX,
+              query: q,
+              hitsPerPage: 200,
+              facetFilters: mainFilters,
+            },
+            // Category facet (disjunctive): same filters minus the category
+            // selection. nbHits here is the "All" count.
+            {
+              indexName: ALGOLIA_INDEX,
+              query: q,
+              hitsPerPage: 0,
+              facets: ["category"],
+              facetFilters: baseFilters,
+            },
+          ],
+        });
+        const main: any = results[0];
+        const cat: any = results[1];
+        setHits(((main?.hits || []) as any[]).map(reshapeAlgolia));
+        setCategoryCounts((cat?.facets?.category || {}) as Record<string, number>);
+        setTotalForAll(cat?.nbHits || 0);
+      } catch (err) {
+        console.error("[Sword and Trowel search failed]", err);
+        setHits([]);
+        setCategoryCounts({});
+        setTotalForAll(0);
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
   );
 
+  // The original UX rule: a free-text search clears the edition filter (so
+  // results aren't accidentally narrow). Preserve that here.
   const resolvedEdition = searchQuery ? null : activeEdition;
 
-  const filtered = useMemo(() => {
-    let result = articles;
-    if (searchQuery) {
-      const lowerQ = searchQuery.toLowerCase();
-      result = result.filter((a: any) =>
-        a.title?.toLowerCase().includes(lowerQ) ||
-        a.author?.toLowerCase().includes(lowerQ) ||
-        a.excerpt?.toLowerCase().includes(lowerQ) ||
-        a.issue?.toLowerCase().includes(lowerQ)
-      );
-    } else {
-      if (resolvedEdition) result = result.filter((a: any) => a.issue === resolvedEdition);
-      if (activeCategory !== "all") result = result.filter((a: any) => a.category === activeCategory);
-    }
-    return result;
-  }, [articles, resolvedEdition, activeCategory, searchQuery]);
+  useEffect(() => {
+    runSearch(searchQuery, resolvedEdition, activeCategory);
+  }, [runSearch, searchQuery, resolvedEdition, activeCategory]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -113,16 +184,29 @@ export default function SwordAndTrowel({ shared }: SwordAndTrowelProps) {
           <EditionSelector
             activeEdition={resolvedEdition}
             onEditionChange={(ed: string | null) => { setActiveEdition(ed); setActiveCategory("all"); }} />
-          <MagazineCategories activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+          <MagazineCategories
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            terms={categoryTerms}
+            counts={categoryCounts}
+            allCount={totalForAll} />
         </div>
       </div>
-      <ArticleGrid articles={filtered} isLoading={loading} />
-      <FooterSection settings={shared?.footer} />
+      <ArticleGrid articles={hits} isLoading={loading} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
 
 export const getStaticProps: GetStaticProps<SwordAndTrowelProps> = async () => {
   const shared = await getSharedPageData();
-  return { props: { shared }, revalidate: 1800 };
+  let categoryTerms: CategoryTerm[] = [];
+  try {
+    const { data } = await apolloClient.query({ query: GET_MAGAZINE_CATEGORY_TERMS });
+    categoryTerms = ((data as any)?.magazineCategories?.nodes || [])
+      .map((t: any) => ({ slug: t.slug, name: t.name }));
+  } catch (err: any) {
+    console.error('[GetMagazineCategoryTerms failed]', err?.message);
+  }
+  return { props: { shared, categoryTerms }, revalidate: 1800 };
 };

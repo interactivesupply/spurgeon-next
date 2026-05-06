@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
-import { apolloClient } from "@/lib/apollo-client";
+import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_SERMON, GET_SERMON_BY_ID, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
@@ -11,9 +11,6 @@ import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-
-const DEFAULT_CARD_IMAGE =
-  "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699e34d59ad598edd05d1adb/59ffad7b3_Screenshot2026-03-11at93400AM.png";
 
 const COLLECTION_LABEL: Record<string, string> = {
   new_park_street_pulpit: "The New Park Street Pulpit",
@@ -55,7 +52,11 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
 
   const fields = sermon.sermonFields || {};
   const collectionSlug = sermon.sermonCollections?.nodes?.[0]?.slug;
-  const heroImage = fields.thumbnailUrl || DEFAULT_CARD_IMAGE;
+  // Prefer the WP featured image; fall back to the legacy ACF thumbnail_url
+  // (set by the spurgeon.org importer). If neither is set, the hero card
+  // is hidden — better than a hardcoded placeholder on every untouched post.
+  const heroImage = sermon.featuredImage?.node?.sourceUrl || fields.thumbnailUrl || '';
+  const heroAlt = sermon.featuredImage?.node?.altText || sermon.title;
   const ytId = fields.videoUrl?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1];
 
   return (
@@ -96,9 +97,11 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
             </h1>
           </div>
 
-          <div className="hidden md:block flex-shrink-0 w-72 aspect-video rounded-xl overflow-hidden border border-border shadow-md bg-white">
-            <img src={heroImage} alt={sermon.title} className="w-full h-full object-contain" />
-          </div>
+          {heroImage && (
+            <div className="hidden md:block flex-shrink-0 w-72 aspect-video rounded-xl overflow-hidden border border-border shadow-md bg-white">
+              <img src={heroImage} alt={heroAlt} className="w-full h-full object-contain" />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-4 flex-wrap text-sm font-sans text-muted-foreground mb-4">
@@ -176,7 +179,7 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
             dangerouslySetInnerHTML={{ __html: sermon.content }} />
         )}
       </motion.div>
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
@@ -191,12 +194,15 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params, preview, previewData }) => {
   const slug = params?.slug as string;
   const shared = await getSharedPageData();
-  // In preview mode, look up by databaseId from the cookie so drafts and
-  // unsaved title changes both resolve correctly.
-  const previewId = preview && (previewData as any)?.postId;
+  // Honor the preview cookie ONLY when the post type matches this page —
+  // otherwise previewing a different CPT and then navigating to a sermon
+  // would try to load the wrong post and return 404.
+  const previewId = preview && (previewData as any)?.postType === 'spurgeon_sermon'
+    ? (previewData as any).postId
+    : null;
   try {
     const { data } = previewId
-      ? await apolloClient.query({
+      ? await apolloPreviewClient().query({
           query: GET_SERMON_BY_ID,
           variables: { id: String(previewId) },
           fetchPolicy: 'no-cache',
@@ -207,7 +213,7 @@ export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params, 
         });
     const sermon = (data as any)?.sermon;
     if (!sermon) {
-      return { notFound: true, revalidate: 60 };
+      return { notFound: true, revalidate: 10 };
     }
     return {
       props: { sermon, shared },
@@ -215,6 +221,6 @@ export const getStaticProps: GetStaticProps<SermonPageProps> = async ({ params, 
     };
   } catch (err: any) {
     console.error('[GET_SERMON failed]', slug, err?.message, err?.networkError?.statusCode, err?.graphQLErrors);
-    return { notFound: true, revalidate: 60 };
+    return { notFound: true, revalidate: 10 };
   }
 };

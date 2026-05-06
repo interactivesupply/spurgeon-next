@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
-import { apolloClient } from "@/lib/apollo-client";
+import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_MAGAZINE_ARTICLE, GET_MAGAZINE_ARTICLE_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
@@ -11,11 +11,13 @@ import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  spurgeon_article: "Spurgeon Article",
-  book_review: "Book Review",
-  chapter_preview: "Chapter Preview",
-  spurgeon_short: "Spurgeon Short",
+// Fallback labels in case the taxonomy term has no `name` (shouldn't happen,
+// but keeps the UI sensible if a category was deleted in wp-admin).
+const CATEGORY_LABEL_FALLBACK: Record<string, string> = {
+  spurgeon_article: "Spurgeon Articles",
+  book_review: "Book Reviews",
+  chapter_preview: "Chapter Previews",
+  short_form: "Short Form",
   news_reports: "News & Reports",
 };
 
@@ -40,9 +42,9 @@ export default function MagazineArticlePage({ article, shared }: ArticlePageProp
   }
 
   const fields = article.magazineArticleFields || {};
-  // WPGraphQL-for-ACF returns select fields as arrays.
-  const rawCategory = Array.isArray(fields.category) ? fields.category[0] : fields.category;
-  const categoryLabel = rawCategory ? CATEGORY_LABELS[rawCategory] || rawCategory : null;
+  // Category now comes from the magazine_category taxonomy.
+  const term = article.magazineCategories?.nodes?.[0];
+  const categoryLabel = term?.name || (term?.slug ? CATEGORY_LABEL_FALLBACK[term.slug] : null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -114,7 +116,7 @@ export default function MagazineArticlePage({ article, shared }: ArticlePageProp
             dangerouslySetInnerHTML={{ __html: article.content }} />
         )}
       </motion.div>
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
@@ -126,10 +128,12 @@ export const getStaticPaths: GetStaticPaths = async () => {
 export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params, preview, previewData }) => {
   const slug = params?.slug as string;
   const shared = await getSharedPageData();
-  const previewId = preview && (previewData as any)?.postId;
+  const previewId = preview && (previewData as any)?.postType === 'magazine_article'
+    ? (previewData as any).postId
+    : null;
   try {
     const { data } = previewId
-      ? await apolloClient.query({
+      ? await apolloPreviewClient().query({
           query: GET_MAGAZINE_ARTICLE_BY_ID,
           variables: { id: String(previewId) },
           fetchPolicy: 'no-cache',
@@ -140,7 +144,7 @@ export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params,
         });
     const article = (data as any)?.magazineArticle;
     if (!article) {
-      return { notFound: true, revalidate: 60 };
+      return { notFound: true, revalidate: 10 };
     }
     return {
       props: { article, shared },
@@ -148,6 +152,6 @@ export const getStaticProps: GetStaticProps<ArticlePageProps> = async ({ params,
     };
   } catch (err: any) {
     console.error('[GET_MAGAZINE_ARTICLE failed]', slug, err?.message);
-    return { notFound: true, revalidate: 60 };
+    return { notFound: true, revalidate: 10 };
   }
 };

@@ -44,13 +44,12 @@ export interface AlgoliaHit {
   author?: string;
   issue?: string;
   category?: string;
-  book?: string;
-  chapter_number?: number | string;
-  devotional?: string;
-  month?: string;
+  // Routing fields for deep-linking from search results.
+  chapter_number?: number | string;          // autobiography + chaptered books
+  month?: string;                            // morning_and_evening, faiths_check_book
   day?: number | string;
-  period?: string;
-  psalm?: number | string;
+  period?: string;                           // morning_and_evening only
+  psalm?: number | string;                   // treasury_entry
   verse?: number | string;
 }
 
@@ -71,21 +70,75 @@ export interface ReshapedHit {
   notable_quote: string | null;
   video_url: string | null;
   thumbnail_url: string | null;
-  // book chapter routing
-  book: string | null;
-  // devotional routing
-  devotional: string | null;
+  // Routing fields for deep-linking on search results
+  chapter_number: number | null;             // autobiography reader → ?chapter=N
+  month: string | null;                      // M&E and FCB readers → ?month=…
+  day: number | null;                        // ?day=…
+  period: string | null;                     // M&E reader → ?period=morning|evening
+  psalm: number | null;                      // Treasury reader → ?psalm=…
+  verse: number | null;                      // ?verse=…
   // permalink fallback (raw WP path)
   permalinkPath: string;
 }
 
+/**
+ * Display label for each post type — used by SearchResultCard's badge,
+ * search filters, and any other UI that surfaces the type. Single source
+ * of truth so adding/renaming a CPT only needs one edit.
+ */
+export const POST_TYPE_LABELS: Record<string, string> = {
+  spurgeon_sermon: 'Sermon',
+  magazine_article: 'Sword and Trowel',
+  spurgeon_book: 'Book',
+  all_of_grace: 'All of Grace',
+  lectures_students: 'Lectures to My Students',
+  around_wicket_gate: 'Around the Wicket Gate',
+  all_round_ministry: 'An All-Round Ministry',
+  autobiography: 'Autobiography',
+  morning_and_evening: 'Morning and Evening',
+  faiths_check_book: "Faith's Check Book",
+  treasury_entry: 'Treasury of David',
+  spurgeon_blog: 'Blog',
+  spurgeon_article: 'Article',
+  conference_media: 'Conference Media',
+  puritan_catechism: 'A Puritan Catechism',
+  commenting_books: 'Commenting and Commentaries',
+  till_he_come: 'Till He Come',
+  proverbs_sermons: 'Sermons on Proverbs',
+  talks_to_farmers: 'Talks to Farmers',
+  gleanings_sheaves: 'Gleanings among the Sheaves',
+};
+
 const POST_TYPE_TO_TYPE: Record<string, string> = {
   spurgeon_sermon: 'sermon',
   magazine_article: 'article',
-  book_chapter: 'book',
-  devotional_entry: 'devotional',
+  spurgeon_book: 'book',
+  all_of_grace: 'book',
+  lectures_students: 'book',
+  around_wicket_gate: 'book',
+  all_round_ministry: 'book',
+  autobiography: 'book',
+  morning_and_evening: 'devotional',
+  faiths_check_book: 'devotional',
   treasury_entry: 'treasury',
+  spurgeon_blog: 'blog',
+  spurgeon_article: 'article',
+  conference_media: 'conference_media',
 };
+
+/**
+ * Append a query string to a base path, skipping any params whose value is
+ * null/undefined. Keeps URLs clean when a hit doesn't have all the routing
+ * fields populated (e.g. an autobiography chapter without a chapter_number).
+ */
+function withParams(path: string, params: Record<string, string | number | null | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v != null && v !== '') qs.set(k, String(v));
+  }
+  const s = qs.toString();
+  return s ? `${path}?${s}` : path;
+}
 
 function extractPath(permalink: string): string {
   try {
@@ -109,7 +162,7 @@ export function reshapeHit(hit: AlgoliaHit): ReshapedHit {
     slug: extractSlug(hit.permalink),
     title: hit.post_title,
     excerpt: hit.post_excerpt || null,
-    type: POST_TYPE_TO_TYPE[hit.post_type] || 'sermon',
+    type: POST_TYPE_TO_TYPE[hit.post_type] || hit.post_type,
     postType: hit.post_type,
     scripture_reference: hit.scripture_reference || null,
     topic: hit.topic || null,
@@ -120,8 +173,12 @@ export function reshapeHit(hit: AlgoliaHit): ReshapedHit {
     notable_quote: hit.notable_quote || null,
     video_url: hit.video_url || null,
     thumbnail_url: hit.thumbnail_url || null,
-    book: hit.book || null,
-    devotional: hit.devotional || null,
+    chapter_number: hit.chapter_number != null ? Number(hit.chapter_number) : null,
+    month: hit.month || null,
+    day: hit.day != null ? Number(hit.day) : null,
+    period: hit.period || null,
+    psalm: hit.psalm != null ? Number(hit.psalm) : null,
+    verse: hit.verse != null ? Number(hit.verse) : null,
     permalinkPath: extractPath(hit.permalink),
   };
 }
@@ -141,15 +198,45 @@ export function urlForHit(hit: ReshapedHit): string {
       return `/sermons/${hit.slug}`;
     case 'magazine_article':
       return `/sword-and-trowel/${hit.slug}`;
-    case 'book_chapter':
-      // ACF stores book slug with underscores ("all_of_grace"); URLs use dashes.
-      return hit.book ? `/books/${hit.book.replace(/_/g, '-')}` : '/books';
-    case 'devotional_entry':
-      return hit.devotional === 'faiths_check_book'
-        ? '/books/faiths-check-book'
-        : '/books/morning-and-evening';
+    case 'spurgeon_book':
+      return `/books/${hit.slug}`;
+    // Per-book chapter CPTs — each routes to its book's reader page.
+    // Chapters carry `chapter_number`, used by /books/<book>?chapter=N to
+    // open directly to that chapter.
+    case 'all_of_grace':
+      return withParams('/books/all-of-grace', { chapter: hit.chapter_number });
+    case 'lectures_students':
+      return withParams('/books/lectures-to-my-students', { chapter: hit.chapter_number });
+    case 'around_wicket_gate':
+      return withParams('/books/around-the-wicket-gate', { chapter: hit.chapter_number });
+    case 'all_round_ministry':
+      return withParams('/books/an-all-round-ministry', { chapter: hit.chapter_number });
+    case 'autobiography':
+      return withParams('/books/autobiography', { chapter: hit.chapter_number });
+    case 'puritan_catechism':
+      return withParams('/books/puritan-catechism', { chapter: hit.chapter_number });
+    case 'commenting_books':
+      return withParams('/books/commenting-and-commentaries', { chapter: hit.chapter_number });
+    case 'till_he_come':
+      return withParams('/books/till-he-come', { chapter: hit.chapter_number });
+    case 'proverbs_sermons':
+      return withParams('/books/sermons-on-proverbs', { chapter: hit.chapter_number });
+    case 'talks_to_farmers':
+      return withParams('/books/talks-to-farmers', { chapter: hit.chapter_number });
+    case 'gleanings_sheaves':
+      return withParams('/books/gleanings-among-the-sheaves', { chapter: hit.chapter_number });
+    case 'morning_and_evening':
+      return withParams('/books/morning-and-evening', { month: hit.month, day: hit.day, period: hit.period });
+    case 'faiths_check_book':
+      return withParams('/books/faiths-check-book', { month: hit.month, day: hit.day });
     case 'treasury_entry':
-      return '/books/treasury-of-david';
+      return withParams('/books/treasury-of-david', { psalm: hit.psalm, verse: hit.verse });
+    case 'spurgeon_blog':
+      return `/blog/${hit.slug}`;
+    case 'spurgeon_article':
+      return `/articles/${hit.slug}`;
+    case 'conference_media':
+      return `/conference-media/${hit.slug}`;
     default:
       return hit.permalinkPath || '/';
   }

@@ -2,79 +2,70 @@ import React from "react";
 import { Badge } from "@/components/ui/badge";
 import MultiSelect from "./MultiSelect";
 
-const allTypes = [
-  { value: "sermon", label: "Sermons" },
-  { value: "article", label: "Articles" },
-  { value: "blog", label: "Blog" },
-  { value: "lecture", label: "Lectures" },
-  { value: "book", label: "Books" },
-  { value: "conference_media", label: "Conference Media" },
-];
+/**
+ * All four dropdowns are now populated from Algolia disjunctive facets passed
+ * in via the `facets` prop. Each entry is { value, count, label? }. The page
+ * computes these by issuing N+1 search requests (one main + one per facet
+ * with that facet's filter excluded), so a dropdown's value list reflects
+ * "what's available given my OTHER selections".
+ *
+ * We still render the Scripture filter as a hardcoded Bible-book list for
+ * now — it's a separate concern (no structured `scripture_book` field on
+ * the Algolia records yet).
+ */
 
-const spurgeonTypes = [
-  { value: "sermon", label: "Sermons" },
-  { value: "book", label: "Books" },
-];
-
-const centerTypes = [
-  { value: "article", label: "Articles" },
-  { value: "blog", label: "Blog" },
-  { value: "lecture", label: "Lectures" },
-  { value: "conference_media", label: "Conference Media" },
-];
-
-const collections = [
-  { value: "new_park_street_pulpit", label: "New Park Street Pulpit" },
-  { value: "metropolitan_tabernacle_pulpit", label: "Metropolitan Tabernacle Pulpit" },
-  { value: "other", label: "Other" },
-];
-
-const topics = [
-  "Prayer", "Grace", "Faith", "Salvation", "Sovereignty", "Suffering",
-  "Holiness", "Evangelism", "Heaven", "Love", "Repentance", "Scripture",
-].map((t) => ({ value: t, label: t }));
-
-const books = [
+// Scripture filter is hardcoded until we add a `scripture_book` field at
+// index time. For now it falls through as a search-query enhancement (page-side).
+const SCRIPTURE_BOOKS = [
   "Genesis", "Psalms", "Isaiah", "Matthew", "John", "Romans",
   "Ephesians", "Philippians", "Hebrews", "Revelation",
 ].map((b) => ({ value: b, label: b }));
 
-const years = Array.from({ length: 1892 - 1854 + 1 }, (_, i) => String(1854 + i))
-  .reverse()
-  .map((y) => ({ value: y, label: y }));
+function toOptions(facetValues = []) {
+  return facetValues.map((v) => ({
+    value: v.value,
+    label: `${v.label || v.value} (${v.count})`,
+  }));
+}
 
-export default function SearchFilters({ filters, onFilterChange, resultCount, meta = "all" }) {
-  const types = meta === "spurgeon" ? spurgeonTypes : meta === "center" ? centerTypes : allTypes;
+export default function SearchFilters({ filters, onFilterChange, resultCount, loadedCount, facets = {} }) {
+  const typeOptions = toOptions(facets.post_type);
+  const collectionOptions = toOptions(facets.collection);
+  const topicOptions = toOptions(facets.topic);
+  // Year facet: present numerically, descending.
+  const yearOptions = toOptions(
+    [...(facets.year || [])].sort((a, b) => Number(b.value) - Number(a.value))
+  );
 
   return (
     <div className="flex flex-col gap-3 py-4 border-b border-border">
       <div className="flex items-center gap-2 flex-wrap">
         <MultiSelect
-          options={types}
-          value={filters.types || []}
-          onChange={(val) => onFilterChange({ ...filters, types: val })}
+          options={typeOptions}
+          value={filters.postTypes || []}
+          onChange={(val) => onFilterChange({ ...filters, postTypes: val })}
           placeholder="All Types"
         />
         <MultiSelect
-          options={collections}
+          options={collectionOptions}
           value={filters.collections || []}
           onChange={(val) => onFilterChange({ ...filters, collections: val })}
           placeholder="All Collections"
         />
         <MultiSelect
-          options={books}
+          options={SCRIPTURE_BOOKS}
           value={filters.scriptures || []}
           onChange={(val) => onFilterChange({ ...filters, scriptures: val })}
           placeholder="Scripture"
         />
         <MultiSelect
-          options={topics}
+          options={topicOptions}
           value={filters.topics || []}
           onChange={(val) => onFilterChange({ ...filters, topics: val })}
           placeholder="Topic"
         />
         <MultiSelect
-          options={years}
+          options={yearOptions}
           value={filters.years || []}
           onChange={(val) => onFilterChange({ ...filters, years: val })}
           placeholder="Year"
@@ -83,7 +74,9 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, me
 
       {resultCount !== null && (
         <Badge variant="secondary" className="font-sans text-xs self-start">
-          {resultCount} result{resultCount !== 1 ? "s" : ""}
+          {loadedCount != null && loadedCount < resultCount
+            ? `Showing ${loadedCount} of ${resultCount} results`
+            : `${resultCount} result${resultCount !== 1 ? "s" : ""}`}
         </Badge>
       )}
     </div>

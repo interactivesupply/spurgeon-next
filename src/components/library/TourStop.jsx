@@ -43,9 +43,9 @@ export default function TourStop({ stop }) {
           </div>
 
           {stop.narrative && (
-            <div className="mt-6 font-sans text-muted-foreground text-sm leading-[1.85] whitespace-pre-line">
-              {decodeEntities(stop.narrative)}
-            </div>
+            <div
+              className="sermon-content mt-6 font-sans text-muted-foreground text-sm leading-[1.85]"
+              dangerouslySetInnerHTML={{ __html: stop.narrative }} />
           )}
 
           {stop.quote && (

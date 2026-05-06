@@ -9,6 +9,7 @@ export const GET_SERMON = gql`
       slug
       content
       excerpt
+      featuredImage { node { sourceUrl altText } }
       sermonFields {
         sermonNumber
         scriptureReference
@@ -44,6 +45,7 @@ export const GET_SERMON_BY_ID = gql`
       slug
       content
       excerpt
+      featuredImage { node { sourceUrl altText } }
       sermonFields {
         sermonNumber
         scriptureReference
@@ -117,12 +119,11 @@ export const SPURGEON_SEARCH = gql`
 
 export const GET_FCB_ENTRY = gql`
   query GetFCBEntry($month: String!, $day: String!) {
-    devotionalEntries(
+    faithsCheckBookEntries(
       first: 1
       where: {
         metaQuery: {
           metaArray: [
-            { key: "devotional", value: "faiths_check_book", compare: EQUAL_TO }
             { key: "month", value: $month, compare: EQUAL_TO }
             { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
           ]
@@ -133,7 +134,7 @@ export const GET_FCB_ENTRY = gql`
       nodes {
         title
         content
-        devotionalEntryFields {
+        faithsCheckBookFields {
           scripture
           month
           day
@@ -145,17 +146,15 @@ export const GET_FCB_ENTRY = gql`
 
 export const GET_DEVOTIONAL_ENTRY = gql`
   query GetDevotionalEntry(
-    $devotional: String!
     $month: String!
     $day: String!
     $period: String
   ) {
-    devotionalEntries(
+    morningAndEveningEntries(
       first: 1
       where: {
         metaQuery: {
           metaArray: [
-            { key: "devotional", value: $devotional, compare: EQUAL_TO }
             { key: "month", value: $month, compare: EQUAL_TO }
             { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
             { key: "period", value: $period, compare: EQUAL_TO }
@@ -167,12 +166,11 @@ export const GET_DEVOTIONAL_ENTRY = gql`
       nodes {
         title
         content
-        devotionalEntryFields {
+        morningAndEveningFields {
           scripture
           month
           day
           period
-          devotional
         }
       }
     }
@@ -229,80 +227,294 @@ export const GET_MAGAZINE_ARTICLES = gql`
         title
         slug
         excerpt
+        magazineCategories { nodes { slug name } }
         magazineArticleFields {
           author
           issue
-          category
           coverImageUrl
           scriptureReference
         }
       }
     }
+    # All terms in the magazine_category taxonomy, used to render the filter
+    # tabs dynamically (so adding a new category in wp-admin shows up here).
+    magazineCategories(first: 50) {
+      nodes { slug name count }
+    }
   }
 `;
 
-export const GET_BOOK_CHAPTER_BY_ID = gql`
-  query GetBookChapterById($id: ID!) {
-    bookChapter(id: $id, idType: DATABASE_ID, asPreview: true) {
+export const GET_CONFERENCE_MEDIA_ITEM = gql`
+  query GetConferenceMediaItem($slug: ID!) {
+    conferenceMediaItem(id: $slug, idType: SLUG) {
+      id
       databaseId
       title
+      slug
       content
       excerpt
-      status
-      bookChapterFields {
-        book
-        chapterNumber
+      date
+      featuredImage { node { sourceUrl altText } }
+      conferenceMediaFields {
+        speaker
+        event
+        sessionNumber
+        year
+        dateRecorded
+        topic
+        scriptureReference
+        notableQuote
+        pdfUrl
+        videoUrl
+        thumbnailUrl
+        relatedResources { label url }
       }
     }
   }
 `;
 
-/**
- * Like GET_BOOK_CHAPTERS but queries with `stati: [PUBLISH, DRAFT, PENDING]`
- * so unpublished chapters surface during preview rendering. The
- * authenticated proxy connection grants access; unauthenticated requests
- * still only see PUBLISH posts.
- */
-export const GET_BOOK_CHAPTERS_PREVIEW = gql`
-  query GetBookChaptersPreview($book: String!) {
-    bookChapters(
-      first: 200
+// Related conference-media items, scoped to the same `event` ACF value when
+// the current item has one, or just the most recent items otherwise. Used for
+// the "You may also like…" section on /conference-media/[slug]. Excludes the
+// current item by databaseId on the client (WPGraphQL has no notIn arg here).
+export const GET_RELATED_CONFERENCE_MEDIA = gql`
+  query GetRelatedConferenceMedia($event: String!, $count: Int = 6) {
+    conferenceMediaItems(
+      first: $count
       where: {
-        stati: [PUBLISH, DRAFT, PENDING]
-        metaQuery: {
-          metaArray: [{ key: "book", value: $book, compare: EQUAL_TO }]
-        }
+        orderby: { field: DATE, order: DESC }
+        metaQuery: { metaArray: [{ key: "event", value: $event, compare: EQUAL_TO }] }
       }
     ) {
       nodes {
         id
         databaseId
         title
-        content
+        slug
         excerpt
-        status
-        bookChapterFields {
-          book
-          chapterNumber
+        featuredImage { node { sourceUrl altText } }
+        conferenceMediaFields {
+          speaker
+          event
+          year
+          dateRecorded
+          videoUrl
+          thumbnailUrl
         }
       }
     }
   }
 `;
 
-export const GET_DEVOTIONAL_ENTRY_BY_ID = gql`
-  query GetDevotionalEntryById($id: ID!) {
-    devotionalEntry(id: $id, idType: DATABASE_ID, asPreview: true) {
+// Fallback when the current item has no `event` set: pull the most recent
+// conference-media items overall.
+export const GET_RECENT_CONFERENCE_MEDIA = gql`
+  query GetRecentConferenceMedia($count: Int = 6) {
+    conferenceMediaItems(
+      first: $count
+      where: { orderby: { field: DATE, order: DESC } }
+    ) {
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        featuredImage { node { sourceUrl altText } }
+        conferenceMediaFields {
+          speaker
+          event
+          year
+          dateRecorded
+          videoUrl
+          thumbnailUrl
+        }
+      }
+    }
+  }
+`;
+
+export const GET_CONFERENCE_MEDIA_ITEM_BY_ID = gql`
+  query GetConferenceMediaItemById($id: ID!) {
+    conferenceMediaItem(id: $id, idType: DATABASE_ID, asPreview: true) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      date
+      featuredImage { node { sourceUrl altText } }
+      conferenceMediaFields {
+        speaker
+        event
+        sessionNumber
+        year
+        dateRecorded
+        topic
+        scriptureReference
+        notableQuote
+        pdfUrl
+        videoUrl
+        thumbnailUrl
+        relatedResources { label url }
+      }
+    }
+  }
+`;
+
+export const GET_BLOG_ENTRIES = gql`
+  query GetBlogEntries(
+    $search: String
+    $first: Int
+    $after: String
+  ) {
+    spurgeonBlogs(
+      first: $first
+      after: $after
+      where: {
+        search: $search
+        orderby: { field: DATE, order: DESC }
+      }
+    ) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        id
+        databaseId
+        title
+        slug
+        excerpt
+        date
+        spurgeonBlogFields {
+          author
+          originalPublishDate
+          scriptureReference
+          featuredImageUrl
+        }
+      }
+    }
+  }
+`;
+
+export const GET_BLOG_ENTRY = gql`
+  query GetBlogEntry($slug: ID!) {
+    spurgeonBlog(id: $slug, idType: SLUG) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      date
+      spurgeonBlogFields {
+        author
+        originalPublishDate
+        scriptureReference
+        featuredImageUrl
+      }
+    }
+  }
+`;
+
+export const GET_BLOG_ENTRY_BY_ID = gql`
+  query GetBlogEntryById($id: ID!) {
+    spurgeonBlog(id: $id, idType: DATABASE_ID, asPreview: true) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      date
+      spurgeonBlogFields {
+        author
+        originalPublishDate
+        scriptureReference
+        featuredImageUrl
+      }
+    }
+  }
+`;
+
+// GET_BOOK_CHAPTER_BY_ID and GET_BOOK_CHAPTERS_PREVIEW were removed when
+// the unified `book_chapter` CPT was split into per-book CPTs (all_of_grace,
+// lectures_students, around_wicket_gate, all_round_ministry, autobiography).
+// The reader page now builds queries dynamically per book — see
+// `chaptersQueryFor` and `chapterByIdQueryFor` in src/lib/books.ts.
+
+export const GET_ARTICLE = gql`
+  query GetArticle($slug: ID!) {
+    spurgeonArticle(id: $slug, idType: SLUG) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      date
+      spurgeonArticleFields {
+        author
+        originalPublishDate
+        scriptureReference
+        featuredImageUrl
+        sourceUrl
+      }
+    }
+  }
+`;
+
+export const GET_ARTICLE_BY_ID = gql`
+  query GetArticleById($id: ID!) {
+    spurgeonArticle(id: $id, idType: DATABASE_ID, asPreview: true) {
+      id
+      databaseId
+      title
+      slug
+      content
+      excerpt
+      date
+      spurgeonArticleFields {
+        author
+        originalPublishDate
+        scriptureReference
+        featuredImageUrl
+        sourceUrl
+      }
+    }
+  }
+`;
+
+export const GET_ME_ENTRY_BY_ID = gql`
+  query GetMorningAndEveningEntryById($id: ID!) {
+    morningAndEveningEntry(id: $id, idType: DATABASE_ID, asPreview: true) {
       databaseId
       title
       content
       status
-      devotionalEntryFields {
+      morningAndEveningFields {
         scripture
         month
         day
         period
-        devotional
+      }
+    }
+  }
+`;
+
+export const GET_FCB_ENTRY_BY_ID = gql`
+  query GetFaithsCheckBookEntryById($id: ID!) {
+    faithsCheckBookEntry(id: $id, idType: DATABASE_ID, asPreview: true) {
+      databaseId
+      title
+      content
+      status
+      faithsCheckBookFields {
+        scripture
+        month
+        day
       }
     }
   }
@@ -351,9 +563,9 @@ export const GET_SPURGEON_BOOK_BY_ID = gql`
       slug
       content
       status
+      bookCategories { nodes { slug name } }
       spurgeonBookFields {
         bookDescription
-        bookCategoryLabel
         bookChapterFilterSlug
         bookDestinationUrl
       }
@@ -368,20 +580,22 @@ export const GET_SPURGEON_BOOK_BY_ID = gql`
  */
 export const GET_PREVIEW_TARGET = gql`
   query GetPreviewTarget($id: ID!) {
-    contentNode(id: $id, idType: DATABASE_ID) {
+    contentNode(id: $id, idType: DATABASE_ID, asPreview: true) {
       databaseId
       slug
       contentType { node { name } }
-      ... on BookChapter {
-        bookChapterFields { book }
-      }
-      ... on DevotionalEntry {
-        devotionalEntryFields { devotional }
-      }
+      # Per-book chapter CPTs (all_of_grace, autobiography, etc.) and the
+      # devotional / treasury CPTs all route purely from contentType.node.name
+      # and slug. No extra fragments needed.
     }
   }
 `;
 
+// Note: GET_BOOK_CHAPTERS was the legacy "all chapters of a book" query
+// that filtered the unified `book_chapter` CPT by ACF `book` value. With
+// per-book CPTs, the reader builds queries dynamically — see
+// `chaptersQueryFor` in lib/books.ts. This query is retained only for any
+// legacy code paths that haven't migrated yet.
 export const GET_BOOK_CHAPTERS = gql`
   query GetBookChapters($book: String!) {
     bookChapters(
@@ -415,10 +629,10 @@ export const GET_MAGAZINE_ARTICLE = gql`
       slug
       content
       excerpt
+      magazineCategories { nodes { slug name } }
       magazineArticleFields {
         author
         issue
-        category
         coverImageUrl
         scriptureReference
         bookTitle
@@ -437,10 +651,10 @@ export const GET_MAGAZINE_ARTICLE_BY_ID = gql`
       slug
       content
       excerpt
+      magazineCategories { nodes { slug name } }
       magazineArticleFields {
         author
         issue
-        category
         coverImageUrl
         scriptureReference
         bookTitle
@@ -471,6 +685,21 @@ export const GET_HOME_PAGE_CONTENT = gql`
           year
           title
           description
+        }
+      }
+      navigationSettings {
+        headerSpurgeonWorks {
+          id label icon description ctaLabel ctaUrl
+          links { label url }
+        }
+        headerCenterResources {
+          id label icon description ctaLabel ctaUrl
+          links { label url }
+        }
+        headerInlineLinks { label url }
+        footerColumns {
+          heading
+          links { label url newTab }
         }
       }
     }
@@ -514,14 +743,59 @@ export const GET_HOME_PAGE_CONTENT = gql`
         libvisitPrimaryUrl
         libvisitSecondaryLabel
         libvisitSecondaryUrl
+        featuredSermons {
+          nodes {
+            __typename
+            ... on Sermon {
+              id
+              databaseId
+              title
+              slug
+              excerpt
+              sermonFields { year notableQuote scriptureReference }
+              sermonCollections { nodes { name } }
+            }
+            ... on SpurgeonArticle {
+              id
+              databaseId
+              title
+              slug
+              excerpt
+              spurgeonArticleFields { author originalPublishDate scriptureReference featuredImageUrl }
+            }
+            ... on SpurgeonBlog {
+              id
+              databaseId
+              title
+              slug
+              excerpt
+              spurgeonBlogFields { author originalPublishDate scriptureReference featuredImageUrl }
+            }
+            ... on MagazineArticle {
+              id
+              databaseId
+              title
+              slug
+              excerpt
+              magazineArticleFields { author issue scriptureReference }
+            }
+            ... on ConferenceMediaItem {
+              id
+              databaseId
+              title
+              slug
+              excerpt
+              conferenceMediaFields { speaker event year scriptureReference }
+            }
+          }
+        }
       }
     }
-    todayDevotional: devotionalEntries(
+    todayDevotional: morningAndEveningEntries(
       first: 1
       where: {
         metaQuery: {
           metaArray: [
-            { key: "devotional", value: "morning_and_evening", compare: EQUAL_TO }
             { key: "period", value: "morning", compare: EQUAL_TO }
             { key: "month", value: $month, compare: EQUAL_TO }
             { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
@@ -533,7 +807,7 @@ export const GET_HOME_PAGE_CONTENT = gql`
       nodes {
         title
         content
-        devotionalEntryFields { scripture }
+        morningAndEveningFields { scripture }
       }
     }
     latestSermons: sermons(first: 10, where: { orderby: { field: DATE, order: DESC } }) {
@@ -545,7 +819,7 @@ export const GET_HOME_PAGE_CONTENT = gql`
         sermonFields { scriptureReference year }
       }
     }
-    featuredSermons: sermons(first: 6, where: { orderby: { field: DATE, order: DESC } }) {
+    fallbackFeaturedSermons: sermons(first: 6, where: { orderby: { field: DATE, order: DESC } }) {
       nodes {
         id
         databaseId
@@ -564,12 +838,11 @@ export const GET_HOME_PAGE_CONTENT = gql`
 
 export const GET_HOME_DATA = gql`
   query GetHomeData($month: String!, $day: String!) {
-    todayDevotional: devotionalEntries(
+    todayDevotional: morningAndEveningEntries(
       first: 1
       where: {
         metaQuery: {
           metaArray: [
-            { key: "devotional", value: "morning_and_evening", compare: EQUAL_TO }
             { key: "period", value: "morning", compare: EQUAL_TO }
             { key: "month", value: $month, compare: EQUAL_TO }
             { key: "day", value: $day, compare: EQUAL_TO, type: NUMERIC }
@@ -581,7 +854,7 @@ export const GET_HOME_DATA = gql`
       nodes {
         title
         content
-        devotionalEntryFields { scripture }
+        morningAndEveningFields { scripture }
       }
     }
     latestSermons: sermons(first: 10, where: { orderby: { field: DATE, order: DESC } }) {
@@ -751,11 +1024,10 @@ export const GET_BOOKS = gql`
         databaseId
         title
         slug
+        bookCategories { nodes { slug name } }
         spurgeonBookFields {
           bookDescription
           bookIcon
-          bookCategoryLabel
-          bookCategoryValue
           bookAccentColor
           bookIconBg
           bookIconColor
@@ -765,6 +1037,12 @@ export const GET_BOOKS = gql`
           bookChapterFilterSlug
         }
       }
+    }
+    # All terms in the book_category taxonomy, used to render the filter tabs
+    # without hardcoding them in the frontend. Terms come back in WP creation
+    # order (which is the order curated in the activation hook).
+    bookCategories(first: 50) {
+      nodes { slug name count }
     }
   }
 `;
@@ -776,9 +1054,9 @@ export const GET_BOOK_BY_SLUG = gql`
       title
       slug
       content
+      bookCategories { nodes { slug name } }
       spurgeonBookFields {
         bookDescription
-        bookCategoryLabel
         bookChapterFilterSlug
         bookDestinationUrl
       }

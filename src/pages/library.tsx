@@ -351,7 +351,7 @@ export default function Library({ library, tourPreview, staff, shared }: Library
         )}
       </div>
 
-      <FooterSection settings={shared.footer} />
+      <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
     </div>
   );
 }

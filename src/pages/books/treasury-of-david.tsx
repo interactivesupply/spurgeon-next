@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
@@ -16,6 +17,7 @@ interface PageProps {
 }
 
 export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
+  const router = useRouter();
   // When previewing, default to the previewed entry's psalm and verse.
   const initialPsalm = previewEntry?.treasuryEntryFields?.psalm || 1;
   const initialVerse = previewEntry?.treasuryEntryFields?.verse ?? null;
@@ -25,10 +27,27 @@ export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
   const [fetchVerses, { data, loading }] = useLazyQuery(GET_TREASURY_VERSES);
   const verses: any[] = (data as any)?.treasuryEntries?.nodes || [];
 
+  // Honor ?psalm=N&verse=N query params (used by search-result deep links).
+  useEffect(() => {
+    if (!router.isReady) return;
+    const p = router.query.psalm;
+    const v = router.query.verse;
+    if (typeof p === 'string') {
+      const n = parseInt(p, 10);
+      if (n >= 1 && n <= 150) setPsalm(n);
+    }
+    if (typeof v === 'string') {
+      const n = parseInt(v, 10);
+      if (Number.isFinite(n)) setSelectedVerse(n);
+    }
+  }, [router.isReady, router.query.psalm, router.query.verse]);
+
   useEffect(() => {
     fetchVerses({ variables: { psalm: String(psalm) } });
-    if (!previewEntry) setSelectedVerse(null);
-  }, [psalm, fetchVerses, previewEntry]);
+    // Don't reset selectedVerse here if the URL is driving it; let the URL
+    // effect above stay in control.
+    if (!previewEntry && !router.query.verse) setSelectedVerse(null);
+  }, [psalm, fetchVerses, previewEntry, router.query.verse]);
 
   // If we're previewing a draft entry on this psalm, splice it into the
   // sorted verses so the navigator highlights it.
@@ -105,20 +124,25 @@ export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
               </div>
             ) : (
               <>
-                <div className="flex flex-wrap gap-1.5 mb-6">
-                  {sortedVerses.map((v) => (
-                    <button
-                      key={v.id}
-                      onClick={() => setSelectedVerse(v.treasuryEntryFields?.verse)}
-                      className={`px-2.5 py-1 rounded-md font-sans text-xs transition-colors ${
-                        currentEntry?.id === v.id
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-card border border-border text-muted-foreground hover:text-foreground"
-                      }`}>
-                      v.{v.treasuryEntryFields?.verse}
-                    </button>
-                  ))}
-                </div>
+                {/* Per-verse navigator: only show when this Psalm has multiple
+                    legacy per-verse records. New per-Psalm imports are a
+                    single record covering the whole Psalm. */}
+                {sortedVerses.length > 1 && sortedVerses.some((v) => v.treasuryEntryFields?.verse) && (
+                  <div className="flex flex-wrap gap-1.5 mb-6">
+                    {sortedVerses.map((v) => (
+                      <button
+                        key={v.id}
+                        onClick={() => setSelectedVerse(v.treasuryEntryFields?.verse)}
+                        className={`px-2.5 py-1 rounded-md font-sans text-xs transition-colors ${
+                          currentEntry?.id === v.id
+                            ? "bg-accent text-accent-foreground"
+                            : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                        }`}>
+                        v.{v.treasuryEntryFields?.verse}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {currentEntry && (
                   <div className="bg-card border border-border rounded-2xl p-8">
@@ -128,20 +152,17 @@ export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
                       </p>
                     )}
                     {currentEntry.content && (
-                      <>
-                        <h3 className="font-serif text-lg font-bold text-foreground mb-3">Exposition</h3>
-                        <div
-                          className="sermon-content font-charter text-lg text-foreground/80 leading-relaxed mb-6"
-                          dangerouslySetInnerHTML={{ __html: currentEntry.content }} />
-                      </>
+                      <div
+                        className="sermon-content font-charter text-[22px] text-foreground/85 leading-[1.8]"
+                        dangerouslySetInnerHTML={{ __html: currentEntry.content }} />
                     )}
                     {currentEntry.treasuryEntryFields?.illustrations && (
-                      <>
+                      <div className="mt-8">
                         <h3 className="font-serif text-lg font-bold text-foreground mb-3">Illustrations</h3>
                         <div
                           className="sermon-content font-sans text-sm text-muted-foreground leading-relaxed"
                           dangerouslySetInnerHTML={{ __html: currentEntry.treasuryEntryFields.illustrations }} />
-                      </>
+                      </div>
                     )}
                   </div>
                 )}
@@ -151,7 +172,7 @@ export default function TreasuryOfDavid({ shared, previewEntry }: PageProps) {
         </div>
       </div>
 
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
@@ -164,8 +185,8 @@ export const getStaticProps: GetStaticProps<PageProps> = async ({ preview, previ
     : null;
   if (previewId) {
     try {
-      const { apolloClient } = await import('@/lib/apollo-client');
-      const { data } = await apolloClient.query({
+      const { apolloPreviewClient } = await import('@/lib/apollo-client');
+      const { data } = await apolloPreviewClient().query({
         query: GET_TREASURY_ENTRY_BY_ID,
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',

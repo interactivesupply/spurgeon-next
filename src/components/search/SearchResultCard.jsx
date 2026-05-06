@@ -1,10 +1,10 @@
 import React from "react";
 import { format } from "date-fns";
 import Link from "next/link";
-import { ROUTES } from "@/lib/routes";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, PlayCircle } from "lucide-react";
 import { stripHtml, decodeEntities } from "@/lib/utils";
+import { urlForHit, POST_TYPE_LABELS } from "@/lib/algolia";
 
 // Extract YouTube video ID from a URL
 function getYouTubeId(url) {
@@ -13,50 +13,28 @@ function getYouTubeId(url) {
   return match ? match[1] : null;
 }
 
-// Pick the right URL based on the result's WordPress post type. Sermons and
-// articles each have their own detail page; book chapters route to the book
-// reader; devotional and treasury hits route to their respective pages.
-function resolveHref(item) {
-  if (item.postType) {
-    switch (item.postType) {
-      case 'spurgeon_sermon':
-        return ROUTES.SermonDetail(item.slug || item.id);
-      case 'magazine_article':
-        return ROUTES.MagazineArticle(item.slug || item.id);
-      case 'book_chapter':
-        return item.book ? ROUTES.BookReader(item.book.replace(/_/g, '-')) : ROUTES.Books;
-      case 'devotional_entry':
-        return item.devotional === 'faiths_check_book'
-          ? ROUTES.FaithsCheckBook
-          : ROUTES.MorningAndEvening;
-      case 'treasury_entry':
-        return ROUTES.TreasuryOfDavid;
-    }
-  }
-  // Fallback for callers that don't carry postType.
-  if (item.type === 'article' || item.type === 'blog' || item.type === 'lecture' || item.type === 'conference_media') {
-    return ROUTES.MagazineArticle(item.slug || item.id);
-  }
-  return ROUTES.SermonDetail(item.slug || item.id);
-}
+// Per-post-type badge color. Default is the primary tint for any type we
+// haven't styled explicitly.
+const TYPE_COLORS = {
+  spurgeon_sermon: "bg-primary/10 text-primary",
+  magazine_article: "bg-accent/10 text-accent",
+  spurgeon_blog: "bg-accent/10 text-accent",
+  conference_media: "bg-blue-100 text-blue-700",
+  book_chapter: "bg-primary/10 text-primary",
+  spurgeon_book: "bg-primary/10 text-primary",
+  morning_and_evening: "bg-amber-100 text-amber-800",
+  faiths_check_book: "bg-emerald-100 text-emerald-800",
+  treasury_entry: "bg-purple-100 text-purple-800",
+};
 
 export default function SearchResultCard({ sermon }) {
-  const typeColors = {
-    sermon: "bg-primary/10 text-primary",
-    article: "bg-accent/10 text-accent",
-    blog: "bg-accent/10 text-accent",
-    lecture: "bg-muted text-muted-foreground",
-    book: "bg-primary/10 text-primary",
-    conference_media: "bg-blue-100 text-blue-700",
-  };
-
-  const isMedia = sermon.type === "conference_media";
+  const isMedia = sermon.postType === "conference_media";
   const ytId = getYouTubeId(sermon.video_url);
   const thumbnail = sermon.thumbnail_url || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null);
 
   return (
     <Link
-      href={resolveHref(sermon)}
+      href={urlForHit(sermon)}
       className="group block"
     >
       <div className="py-6 border-b border-border hover:bg-secondary/30 transition-colors -mx-4 px-4 rounded-lg">
@@ -82,10 +60,10 @@ export default function SearchResultCard({ sermon }) {
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge
                 className={`font-sans text-[10px] uppercase tracking-wider ${
-                  typeColors[sermon.type] || typeColors.sermon
+                  TYPE_COLORS[sermon.postType] || "bg-muted text-muted-foreground"
                 }`}
               >
-                {sermon.type === "conference_media" ? "Conference Media" : sermon.type || "Sermon"}
+                {POST_TYPE_LABELS[sermon.postType] || sermon.postType || "Result"}
               </Badge>
               {(sermon.date_preached || sermon.year) && (
                 <span className="font-sans text-xs text-muted-foreground">

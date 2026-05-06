@@ -38,3 +38,7 @@ next-env.d.ts
 # Generated docs (PDFs from CONTENT_MANAGEMENT.md etc.) — regenerate via
 # `npx md-to-pdf <file>.md` whenever you need a fresh copy
 *.pdf
+
+# Per-machine state for the Userback → Slack triage cron. Tracks which Open
+# feedback IDs we've already alerted on so we don't re-notify on every fire.
+.userback-triage-state.json

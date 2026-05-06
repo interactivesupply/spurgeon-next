@@ -14,9 +14,54 @@ const DEFAULTS = {
   mbtsPursueUrl: "https://www.mbts.edu/",
 };
 
-export default function FooterSection({ settings }) {
+// Fallback footer columns when the editor-managed `footer_columns` field is
+// empty (fresh installs or before someone seeds defaults).
+const FALLBACK_FOOTER_COLUMNS = [
+  {
+    heading: 'Explore',
+    links: [
+      { label: 'Home',           url: '/',       newTab: false },
+      { label: 'Search Library', url: '/search', newTab: false },
+      { label: 'About Spurgeon', url: '/about',  newTab: false },
+    ],
+  },
+  {
+    heading: 'Connected',
+    links: [
+      { label: 'Midwestern Seminary', url: 'https://www.mbts.edu/',         newTab: true },
+      { label: 'Spurgeon College',    url: 'https://spurgeoncollege.com/', newTab: true },
+      { label: 'For the Church',      url: 'https://ftc.co/',              newTab: true },
+    ],
+  },
+];
+
+function FooterLink({ link }) {
+  const isExternal = /^https?:\/\//i.test(link.url);
+  if (isExternal || link.newTab) {
+    return (
+      <a
+        href={link.url}
+        target={link.newTab ? '_blank' : undefined}
+        rel={link.newTab ? 'noopener noreferrer' : undefined}
+        className="hover:text-accent transition-colors">
+        {link.label}
+      </a>
+    );
+  }
+  return (
+    <Link href={link.url} className="hover:text-accent transition-colors">
+      {link.label}
+    </Link>
+  );
+}
+
+export default function FooterSection({ settings, footerColumns }) {
   const s = settings || {};
   const v = (k) => s[k] || DEFAULTS[k];
+
+  // Editor-managed columns first, hardcoded fallback otherwise. Last column
+  // always carries the SubscribeModal (a fixed component, not editor content).
+  const columns = (footerColumns && footerColumns.length ? footerColumns : FALLBACK_FOOTER_COLUMNS);
 
   return (
     <div>
@@ -43,28 +88,21 @@ export default function FooterSection({ settings }) {
               </a>
             </div>
 
-            <div>
-              <h4 className="font-sans text-xs font-semibold tracking-[0.2em] uppercase text-primary-foreground/40 mb-4">
-                Explore
-              </h4>
-              <ul className="space-y-2.5 font-sans text-sm">
-                <li><Link href={ROUTES.Home} className="hover:text-accent transition-colors">Home</Link></li>
-                <li><Link href={ROUTES.Search} className="hover:text-accent transition-colors">Search Library</Link></li>
-                <li><Link href={ROUTES.About} className="hover:text-accent transition-colors">About Spurgeon</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-sans text-xs font-semibold tracking-[0.2em] uppercase text-primary-foreground/40 mb-4">
-                Connected
-              </h4>
-              <ul className="space-y-2.5 font-sans text-sm mb-5">
-                <li><a href="https://www.mbts.edu/" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">Midwestern Seminary</a></li>
-                <li><a href="https://spurgeoncollege.com/" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">Spurgeon College</a></li>
-                <li><a href="https://ftc.co/" target="_blank" rel="noopener noreferrer" className="hover:text-accent transition-colors">For the Church</a></li>
-              </ul>
-              <SubscribeModal />
-            </div>
+            {columns.map((col, i) => (
+              <div key={col.heading + i}>
+                <h4 className="font-sans text-xs font-semibold tracking-[0.2em] uppercase text-primary-foreground/40 mb-4">
+                  {col.heading}
+                </h4>
+                <ul className="space-y-2.5 font-sans text-sm mb-5">
+                  {(col.links || []).map((link, j) => (
+                    <li key={link.url + j}><FooterLink link={link} /></li>
+                  ))}
+                </ul>
+                {/* Subscribe modal lives in the last column (editorial choice;
+                    the columns themselves don't carry CTAs). */}
+                {i === columns.length - 1 && <SubscribeModal />}
+              </div>
+            ))}
           </div>
 
           <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">

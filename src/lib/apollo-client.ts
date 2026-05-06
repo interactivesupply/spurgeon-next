@@ -1,40 +1,66 @@
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 
 const wpUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL || '';
-
-/**
- * Two-mode HTTP link:
- * - Server-side (SSR/SSG/API routes): hits WordPress directly with basic
- *   auth from server-only env vars.
- * - Browser: hits our own /api/graphql proxy, which forwards to WordPress
- *   with the basic auth header attached server-side. No credentials in
- *   client JS, no CORS issues with the basic auth gate.
- *
- * Once the production WP install no longer requires basic auth, the
- * proxy still works fine — it's just a passthrough.
- */
 const isServer = typeof window === 'undefined';
 
-const ssrUser = process.env.WORDPRESS_BASIC_AUTH_USER;
-const ssrPass = process.env.WORDPRESS_BASIC_AUTH_PASSWORD;
-const ssrAuthHeader = isServer && ssrUser && ssrPass
-  ? 'Basic ' + Buffer.from(`${ssrUser}:${ssrPass}`).toString('base64')
-  : null;
-
-const httpLink = createHttpLink({
-  uri: isServer ? `${wpUrl}/graphql` : '/api/graphql',
-  headers: ssrAuthHeader ? { Authorization: ssrAuthHeader } : {},
-});
-
+/**
+ * Default Apollo client for unauthenticated GraphQL queries — used for
+ * everything the public site renders. Browser and server both hit
+ * WordPress directly. SSR/SSG paths use no-cache so getStaticProps + ISR
+ * are the cache layer; the browser uses cache-first for fast in-session
+ * navigation.
+ */
 export const apolloClient = new ApolloClient({
-  link: httpLink,
+  link: createHttpLink({ uri: `${wpUrl}/graphql` }),
   cache: new InMemoryCache(),
   defaultOptions: {
-    // SSR/SSG should always hit WordPress fresh so getStaticProps + ISR
-    // are the single source of cache truth. Browser queries cache normally
-    // for fast in-session navigation.
     query: { fetchPolicy: isServer ? 'no-cache' : 'cache-first' },
     watchQuery: { fetchPolicy: isServer ? 'no-cache' : 'cache-first' },
   },
   ssrMode: isServer,
 });
+
+/**
+ * Authenticated Apollo client for preview-only SSR queries. Sends the
+ * preview-bot Application Password as Basic Auth so WPGraphQL accepts
+ * `asPreview: true` and returns the latest autosaved revision (lets
+ * editors see unsaved changes via the Preview button).
+ *
+ * Lazily constructed — env vars aren't always present (preview-bot
+ * credentials don't ship to production builds), and we don't want to
+ * read them at module load.
+ *
+ * Server-only: callers should only invoke this from getStaticProps /
+ * getServerSideProps / API routes, never from React components.
+ */
+let _previewClient: ApolloClient | null = null;
+export function apolloPreviewClient(): ApolloClient {
+  if (_previewClient) return _previewClient;
+
+  const user = process.env.WP_PREVIEW_USER;
+  const pass = process.env.WP_PREVIEW_APP_PASSWORD;
+  if (!user || !pass) {
+    throw new Error(
+      'apolloPreviewClient: WP_PREVIEW_USER / WP_PREVIEW_APP_PASSWORD not set. ' +
+        'Generate an Application Password for an Editor user and add both to .env.local.'
+    );
+  }
+  // App passwords come back from WP with spaces for readability; WP accepts
+  // them with or without, but normalize so we don't have whitespace inside
+  // a base64-encoded credential.
+  const cred = Buffer.from(`${user}:${pass.replace(/\s+/g, '')}`).toString('base64');
+
+  _previewClient = new ApolloClient({
+    link: createHttpLink({
+      uri: `${wpUrl}/graphql`,
+      headers: { Authorization: `Basic ${cred}` },
+    }),
+    cache: new InMemoryCache(),
+    defaultOptions: {
+      query: { fetchPolicy: 'no-cache' },
+      watchQuery: { fetchPolicy: 'no-cache' },
+    },
+    ssrMode: true,
+  });
+  return _previewClient;
+}

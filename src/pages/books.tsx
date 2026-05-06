@@ -24,8 +24,14 @@ interface Book {
   categoryColor: string;
 }
 
+interface CategoryTerm {
+  slug: string;
+  name: string;
+}
+
 interface BooksProps {
   books: Book[];
+  categoryTerms: CategoryTerm[];
   shared: SharedPageData;
 }
 
@@ -34,7 +40,7 @@ const FALLBACK_BOOKS: Book[] = [
   { id: "morning_and_evening", title: "Morning and Evening", category: "Devotional", categoryValue: "devotional", description: "Two devotional readings for every day of the year.", href: "/books/morning-and-evening", icon: "Sun", subscribable: true, accentColor: "#526B41", iconBg: "#526B4120", iconColor: "#526B41", categoryColor: "#526B41" },
 ];
 
-export default function Books({ books: incomingBooks, shared }: BooksProps) {
+export default function Books({ books: incomingBooks, categoryTerms, shared }: BooksProps) {
   const [activeCategory, setActiveCategory] = useState("all");
   const books = (incomingBooks?.length ? incomingBooks : FALLBACK_BOOKS);
 
@@ -46,7 +52,7 @@ export default function Books({ books: incomingBooks, shared }: BooksProps) {
   return (
     <div className="min-h-screen bg-background">
       <BooksHero />
-      <BookCategoryTabs active={activeCategory} onChange={setActiveCategory} />
+      <BookCategoryTabs active={activeCategory} onChange={setActiveCategory} terms={categoryTerms} />
       <div className="max-w-5xl mx-auto px-6 py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map((book) => (
@@ -54,7 +60,7 @@ export default function Books({ books: incomingBooks, shared }: BooksProps) {
           ))}
         </div>
       </div>
-      <FooterSection settings={shared.footer} />
+      <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
     </div>
   );
 }
@@ -66,17 +72,21 @@ function flat(value: any): string {
 export const getStaticProps: GetStaticProps<BooksProps> = async () => {
   const shared = await getSharedPageData();
   let books: Book[] = [];
+  let categoryTerms: CategoryTerm[] = [];
 
   try {
     const { data } = await apolloClient.query({ query: GET_BOOKS });
     const nodes = (data as any)?.spurgeonBooks?.nodes || [];
+    const terms = (data as any)?.bookCategories?.nodes || [];
+    categoryTerms = terms.map((t: any) => ({ slug: t.slug, name: t.name }));
     books = nodes.map((n: any) => {
       const f = n.spurgeonBookFields || {};
+      const term = n.bookCategories?.nodes?.[0];
       return {
         id: String(n.databaseId),
         title: n.title,
-        category: f.bookCategoryLabel || '',
-        categoryValue: flat(f.bookCategoryValue) || '',
+        category: term?.name || '',
+        categoryValue: term?.slug || '',
         description: f.bookDescription || '',
         href: f.bookDestinationUrl || `/books/${n.slug}`,
         icon: flat(f.bookIcon) || 'BookOpen',
@@ -91,5 +101,5 @@ export const getStaticProps: GetStaticProps<BooksProps> = async () => {
     console.error('[GetBooks failed]', err?.message);
   }
 
-  return { props: { books, shared }, revalidate: 3600 };
+  return { props: { books, categoryTerms, shared }, revalidate: 3600 };
 };

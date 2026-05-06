@@ -9,17 +9,13 @@ const categoryMeta = {
   spurgeon_article: { label: "Spurgeon Article", icon: BookOpen, color: "text-amber-700 bg-amber-50 border-amber-200" },
   book_review: { label: "Book Review", icon: BookMarked, color: "text-blue-700 bg-blue-50 border-blue-200" },
   chapter_preview: { label: "Chapter Preview", icon: FileText, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-  spurgeon_short: { label: "Short Form", icon: Newspaper, color: "text-purple-700 bg-purple-50 border-purple-200" },
+  short_form: { label: "Short Form", icon: Newspaper, color: "text-purple-700 bg-purple-50 border-purple-200" },
   news_reports: { label: "News & Reports", icon: Radio, color: "text-rose-700 bg-rose-50 border-rose-200" },
 };
 
-// WPGraphQL-for-ACF returns select fields as arrays; flatten for display.
-function flat(value) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 function ArticleCard({ article, index }) {
-  const category = flat(article.category);
+  // article.category is now the taxonomy term slug (set in the page's reshape).
+  const category = article.category || '';
   const meta = categoryMeta[category] || categoryMeta.spurgeon_article;
   const Icon = meta.icon;
 

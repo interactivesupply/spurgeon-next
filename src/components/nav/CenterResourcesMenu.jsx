@@ -3,8 +3,10 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 import { motion, AnimatePresence } from "framer-motion";
 import { FileText, Video, ChevronRight, ArrowRight, Library } from "lucide-react";
+import { iconFor } from "@/lib/icon-registry";
 
-const columns = [
+// Fallback content when the editor-managed nav field group is empty.
+const FALLBACK_COLUMNS = [
   {
     id: "articles",
     label: "Articles",
@@ -35,9 +37,23 @@ const columns = [
   },
 ];
 
-export default function CenterResourcesMenu() {
+function normalize(cols) {
+  if (!Array.isArray(cols) || cols.length === 0) return null;
+  return cols.map((c, i) => ({
+    id: c.id || `col-${i}`,
+    label: c.label || '',
+    icon: iconFor(c.icon),
+    description: c.description || '',
+    links: (c.links || []).map((l) => ({ label: l.label || '', to: l.url || '' })),
+    cta: c.ctaLabel ? { label: c.ctaLabel, to: c.ctaUrl || '' } : null,
+  }));
+}
+
+export default function CenterResourcesMenu({ columns: editorColumns }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef(null);
+
+  const columns = normalize(editorColumns) || FALLBACK_COLUMNS;
 
   const handleMouseEnter = () => { clearTimeout(timeoutRef.current); setOpen(true); };
   const handleMouseLeave = () => { timeoutRef.current = setTimeout(() => setOpen(false), 150); };
@@ -96,14 +112,16 @@ export default function CenterResourcesMenu() {
                         </li>
                       ))}
                     </ul>
-                    <Link
-                      href={col.cta.to}
-                      onClick={() => setOpen(false)}
-                      className="mt-auto flex items-center gap-1 font-sans text-xs text-accent hover:text-accent/80 transition-colors pt-2 border-t border-white/8"
-                    >
-                      {col.cta.label}
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
+                    {col.cta && col.cta.to && (
+                      <Link
+                        href={col.cta.to}
+                        onClick={() => setOpen(false)}
+                        className="mt-auto flex items-center gap-1 font-sans text-xs text-accent hover:text-accent/80 transition-colors pt-2 border-t border-white/8"
+                      >
+                        {col.cta.label}
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    )}
                   </div>
                 );
               })}

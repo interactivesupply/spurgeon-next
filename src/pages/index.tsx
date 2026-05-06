@@ -22,6 +22,7 @@ interface HomeProps {
   timeline: { eyebrow: string; heading: string; milestones: any[] };
   mbts: any;
   footer: any;
+  nav: any;
   // Dynamic data:
   devotional: any | null;
   latestSermons: any[];
@@ -56,7 +57,7 @@ export default function Home(props: HomeProps) {
         items={props.resources?.items} />
       <LibraryVisitSection content={props.libvisit} />
       <MBTSBanner content={props.mbts} />
-      <FooterSection settings={props.footer} />
+      <FooterSection settings={props.footer} footerColumns={props.nav?.footerColumns} />
       <ScrollPopup />
     </div>
   );
@@ -77,7 +78,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
   // defaults still kick in if these are empty.
   const empty: HomeProps = {
     hero: null, stats: [], resources: null as any, libvisit: null,
-    timeline: null as any, mbts: null, footer: null,
+    timeline: null as any, mbts: null, footer: null, nav: null,
     devotional: null, latestSermons: [], featuredSermons: [], featuredArticle: null,
   };
 
@@ -151,9 +152,20 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         mbtsPursueLabel: settings.footerMbtsPursueLabel,
         mbtsPursueUrl: settings.footerMbtsPursueUrl,
       },
+      // Navigation (header mega-menus, inline links, footer columns) is
+      // also read from spurgeonSettings.navigationSettings; passes straight
+      // through. Layout (via _app pageProps.shared.nav) is what consumes
+      // this; we also pass shared in the page props shape so _app picks it up.
+      nav: (data as any)?.spurgeonSettings?.navigationSettings || null,
       devotional: d?.todayDevotional?.nodes?.[0] || null,
       latestSermons: d?.latestSermons?.nodes || [],
-      featuredSermons: d?.featuredSermons?.nodes || [],
+      // Editor-curated picks first (homePageFields.featuredSermons); if no
+      // picks are set, fall back to the latest 6 sermons by date so the
+      // section never renders empty.
+      featuredSermons:
+        home.featuredSermons?.nodes?.length
+          ? home.featuredSermons.nodes
+          : (d?.fallbackFeaturedSermons?.nodes || []),
       featuredArticle: d?.featuredArticle?.nodes?.[0] || null,
     };
 

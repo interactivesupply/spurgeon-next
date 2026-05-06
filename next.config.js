@@ -60,4 +60,10 @@ const nextConfig = {
   },
 };
 
-module.exports = withFaust(nextConfig);
+// Faust auto-injects a redirect that matches any URL with `?preview=true`
+// and sends it to /preview by default. This site uses bespoke per-CPT pages
+// instead of Faust's catch-all template renderer, so route Faust's preview
+// trigger through our own /api/preview handler — which validates the shared
+// secret, sets the Next.js preview cookie, and redirects to the correct
+// per-CPT page (e.g. /blog/<slug>, /sermons/<slug>).
+module.exports = withFaust(nextConfig, { previewDestination: '/api/preview' });

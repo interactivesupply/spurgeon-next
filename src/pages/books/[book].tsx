@@ -1,16 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
-import { apolloClient } from "@/lib/apollo-client";
+import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
+import { GET_BOOK_BY_SLUG, GET_SPURGEON_BOOK_BY_ID } from "@/lib/queries";
 import {
-  GET_BOOK_CHAPTERS,
-  GET_BOOK_CHAPTERS_PREVIEW,
-  GET_BOOK_BY_SLUG,
-  GET_READER_BOOK_SLUGS,
-  GET_BOOK_CHAPTER_BY_ID,
-  GET_SPURGEON_BOOK_BY_ID,
-} from "@/lib/queries";
+  BOOK_CPT_BY_SLUG,
+  BOOK_SLUG_BY_POST_TYPE,
+  chaptersQueryFor,
+  chapterByIdQueryFor,
+} from "@/lib/books";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
@@ -25,7 +25,29 @@ interface BookReaderProps {
 }
 
 export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters, shared }: BookReaderProps) {
+  const router = useRouter();
   const [chapterIdx, setChapterIdx] = useState(0);
+
+  // Honor ?chapter=N query parameter (used by search-result deep links to
+  // open directly to a specific chapter). Sets the index after chapters are
+  // sorted by chapter_number; the first chapter is index 0 = chapter 1.
+  const sorted = [...chapters].sort(
+    (a, b) => (a.bookChapterFields?.chapterNumber ?? 0) - (b.bookChapterFields?.chapterNumber ?? 0)
+  );
+  useEffect(() => {
+    if (!router.isReady || sorted.length === 0) return;
+    const ch = router.query.chapter;
+    if (typeof ch === 'string') {
+      const n = parseInt(ch, 10);
+      if (Number.isFinite(n)) {
+        const idx = sorted.findIndex(c => Number(c.bookChapterFields?.chapterNumber) === n);
+        if (idx >= 0) setChapterIdx(idx);
+      }
+    }
+    // We intentionally only run this when the URL changes; chapter list is
+    // stable for a given page render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.chapter]);
 
   if (!bookTitle) {
     return (
@@ -41,9 +63,6 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
     );
   }
 
-  const sorted = [...chapters].sort(
-    (a, b) => (a.bookChapterFields?.chapterNumber ?? 0) - (b.bookChapterFields?.chapterNumber ?? 0)
-  );
   const current = sorted[chapterIdx];
 
   return (
@@ -78,21 +97,31 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between gap-3 mb-8">
               <button
                 onClick={() => setChapterIdx(i => Math.max(0, i - 1))}
                 disabled={chapterIdx === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30">
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30 flex-shrink-0">
                 <ChevronLeft className="w-4 h-4" />
                 Previous
               </button>
-              <span className="font-sans text-sm text-muted-foreground">
-                Chapter {chapterIdx + 1} of {sorted.length}
-              </span>
+              <select
+                value={chapterIdx}
+                onChange={(e) => setChapterIdx(Number(e.target.value))}
+                className="flex-1 min-w-0 bg-card border border-border rounded-lg px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary/40 max-w-md">
+                {sorted.map((c, i) => {
+                  const num = c.bookChapterFields?.chapterNumber ?? i + 1;
+                  return (
+                    <option key={c.databaseId ?? i} value={i}>
+                      {num}. {decodeEntities(c.title || `Chapter ${num}`)}
+                    </option>
+                  );
+                })}
+              </select>
               <button
                 onClick={() => setChapterIdx(i => Math.min(sorted.length - 1, i + 1))}
                 disabled={chapterIdx === sorted.length - 1}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30">
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30 flex-shrink-0">
                 Next
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -112,46 +141,45 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
         )}
       </div>
 
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
 
+/**
+ * Pre-build the static paths for every per-book reader page. The five book
+ * CPTs are known up front (see lib/books.ts); other slugs that land here
+ * (e.g. typos) fall through `notFound`.
+ */
 export const getStaticPaths: GetStaticPaths = async () => {
-  // Build paths for every spurgeon_book whose ACF chapter_filter_slug is
-  // populated — that's the marker for "this book is a reader page" (vs.
-  // M&E/FCB/Treasury, which have their own dedicated pages).
-  try {
-    const { data } = await apolloClient.query({ query: GET_READER_BOOK_SLUGS });
-    const nodes = (data as any)?.spurgeonBooks?.nodes || [];
-    const paths = nodes
-      .filter((n: any) => !!n.spurgeonBookFields?.bookChapterFilterSlug)
-      .map((n: any) => ({ params: { book: n.slug } }));
-    return { paths, fallback: 'blocking' };
-  } catch {
-    return { paths: [], fallback: 'blocking' };
-  }
+  return {
+    paths: Object.keys(BOOK_CPT_BY_SLUG).map(book => ({ params: { book } })),
+    fallback: 'blocking',
+  };
 };
-
-function flat(value: any): any {
-  return Array.isArray(value) ? value[0] : value;
-}
 
 export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params, preview, previewData }) => {
   const bookSlug = params?.book as string;
   const shared = await getSharedPageData();
 
+  // Identify the per-book CPT this URL maps to. If unknown, 404.
+  const cfg = BOOK_CPT_BY_SLUG[bookSlug];
+  if (!cfg) {
+    return { notFound: true, revalidate: 60 };
+  }
+
   let bookTitle = '';
   let bookSubtitle = '';
-  let chapterFilterSlug = '';
 
   const previewId = preview ? (previewData as any)?.postId : null;
   const previewType = preview ? (previewData as any)?.postType : null;
 
-  // Preview mode A: spurgeon_book draft. Fetch by ID, override book metadata.
+  // Preview mode A: a spurgeon_book draft (the catalog metadata page). Use
+  // its content to override the reader header. Editors typically don't
+  // preview this one but it's harmless to support.
   if (previewId && previewType === 'spurgeon_book') {
     try {
-      const { data } = await apolloClient.query({
+      const { data } = await apolloPreviewClient().query({
         query: GET_SPURGEON_BOOK_BY_ID,
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',
@@ -160,33 +188,29 @@ export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params, 
       if (book) {
         bookTitle = book.title || '';
         bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
-        chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
       }
     } catch (err: any) {
       console.error('[GetSpurgeonBookById preview failed]', err?.message);
     }
   }
 
-  // Preview mode B: book_chapter draft. Fetch the chapter to discover its
-  // book filter slug, then look up the parent book and its chapters.
+  // Preview mode B: a chapter draft for THIS book's CPT. Splice it into the
+  // chapter list so the editor sees their changes inline.
   let previewChapter: any = null;
-  if (previewId && previewType === 'book_chapter') {
+  if (previewId && previewType === cfg.postType) {
     try {
-      const { data } = await apolloClient.query({
-        query: GET_BOOK_CHAPTER_BY_ID,
+      const { data } = await apolloPreviewClient().query({
+        query: chapterByIdQueryFor(cfg),
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',
       });
-      previewChapter = (data as any)?.bookChapter;
-      if (previewChapter) {
-        chapterFilterSlug = flat(previewChapter.bookChapterFields?.book) || '';
-      }
+      previewChapter = (data as any)?.[cfg.graphqlSingle] || null;
     } catch (err: any) {
-      console.error('[GetBookChapterById preview failed]', err?.message);
+      console.error(`[${cfg.graphqlSingle} preview failed]`, err?.message);
     }
   }
 
-  // Default lookup by URL slug if we didn't already populate from preview.
+  // Default lookup of book metadata by slug — works regardless of preview state.
   if (!bookTitle) {
     try {
       const { data } = await apolloClient.query({
@@ -195,45 +219,34 @@ export const getStaticProps: GetStaticProps<BookReaderProps> = async ({ params, 
       });
       const book = (data as any)?.spurgeonBook;
       if (book) {
-        bookTitle = book.title || '';
+        bookTitle = book.title || cfg.displayName;
         bookSubtitle = book.spurgeonBookFields?.bookDescription || '';
-        if (!chapterFilterSlug) {
-          chapterFilterSlug = book.spurgeonBookFields?.bookChapterFilterSlug || '';
-        }
       }
     } catch {
-      // fall through
+      // fall through; we'll use the displayName as the title.
     }
   }
+  if (!bookTitle) bookTitle = cfg.displayName;
 
-  if (!bookTitle) {
-    return { notFound: true, revalidate: 60 };
-  }
-
-  // In preview mode for either book or chapter, query chapters with all
-  // statuses so drafts show up alongside published.
-  const chaptersQuery = (previewType === 'book_chapter' || previewType === 'spurgeon_book')
-    ? GET_BOOK_CHAPTERS_PREVIEW
-    : GET_BOOK_CHAPTERS;
-
+  // Fetch all chapters for this book's CPT.
   let chapters: any[] = [];
-  if (chapterFilterSlug) {
-    try {
-      const { data } = await apolloClient.query({
-        query: chaptersQuery,
-        variables: { book: chapterFilterSlug },
-        fetchPolicy: previewType ? 'no-cache' : 'cache-first',
-      });
-      chapters = (data as any)?.bookChapters?.nodes || [];
-    } catch {
-      // leave chapters empty; page shows "No chapters available yet"
-    }
+  try {
+    // In preview mode, an authenticated client lets unpublished chapters
+    // surface; otherwise the public client is fine.
+    const client = previewType === cfg.postType ? apolloPreviewClient() : apolloClient;
+    const { data } = await client.query({
+      query: chaptersQueryFor(cfg),
+      fetchPolicy: previewType === cfg.postType ? 'no-cache' : 'cache-first',
+    });
+    chapters = (data as any)?.[cfg.graphqlPlural]?.nodes || [];
+  } catch (err: any) {
+    console.error(`[${cfg.graphqlPlural} fetch failed]`, err?.message);
   }
 
-  // If we previewed a chapter that wasn't in the list (e.g. brand-new
-  // unpublished draft), splice it in.
+  // If we previewed a chapter that wasn't in the published list (brand new draft),
+  // splice it in.
   if (previewChapter) {
-    const idx = chapters.findIndex((c) => c.databaseId === previewChapter.databaseId);
+    const idx = chapters.findIndex((c: any) => c.databaseId === previewChapter.databaseId);
     if (idx >= 0) chapters[idx] = previewChapter;
     else chapters = [...chapters, previewChapter];
   }

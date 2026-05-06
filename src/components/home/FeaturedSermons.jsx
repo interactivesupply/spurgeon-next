@@ -6,8 +6,76 @@ import { ROUTES } from "@/lib/routes";
 import { decodeEntities } from "@/lib/utils";
 
 /**
+ * Resolve the right URL for a featured-content node based on its WPGraphQL
+ * type name. The Featured Content ACF field accepts multiple post types
+ * (sermons, articles, blog, magazine, conference media) so the card link
+ * has to dispatch by __typename.
+ */
+function urlForNode(node) {
+  switch (node.__typename) {
+    case 'Sermon':              return ROUTES.SermonDetail(node.slug);
+    case 'SpurgeonArticle':     return ROUTES.Article(node.slug);
+    case 'SpurgeonBlog':        return ROUTES.BlogPost(node.slug);
+    case 'MagazineArticle':     return ROUTES.MagazineArticle(node.slug);
+    case 'ConferenceMediaItem': return ROUTES.ConferenceMediaItem(node.slug);
+    default:                    return `/${node.slug || ''}`;
+  }
+}
+
+/**
+ * Eyebrow label per type. Always reflects the post type, never the sermon
+ * collection — collection (e.g. "Metropolitan Tabernacle Pulpit") is shown
+ * elsewhere on the sermon detail page.
+ */
+function labelForNode(node /*, collectionName */) {
+  switch (node.__typename) {
+    case 'Sermon':              return 'Sermon';
+    case 'SpurgeonArticle':     return 'Article';
+    case 'SpurgeonBlog':        return 'Blog';
+    case 'MagazineArticle':     return 'Sword & Trowel';
+    case 'ConferenceMediaItem': return 'Conference';
+    default:                    return 'Featured';
+  }
+}
+
+/**
+ * Pull the most-relevant per-type metadata (year + scripture reference) so
+ * the card body is consistent regardless of which post type was picked.
+ */
+function metaForNode(node) {
+  switch (node.__typename) {
+    case 'Sermon': {
+      const f = node.sermonFields || {};
+      return { year: f.year, scriptureReference: f.scriptureReference, notableQuote: f.notableQuote };
+    }
+    case 'SpurgeonArticle': {
+      const f = node.spurgeonArticleFields || {};
+      const y = (f.originalPublishDate || '').slice(0, 4);
+      return { year: y || null, scriptureReference: f.scriptureReference, notableQuote: null };
+    }
+    case 'SpurgeonBlog': {
+      const f = node.spurgeonBlogFields || {};
+      const y = (f.originalPublishDate || '').slice(0, 4);
+      return { year: y || null, scriptureReference: f.scriptureReference, notableQuote: null };
+    }
+    case 'MagazineArticle': {
+      const f = node.magazineArticleFields || {};
+      return { year: f.issue || null, scriptureReference: f.scriptureReference, notableQuote: null };
+    }
+    case 'ConferenceMediaItem': {
+      const f = node.conferenceMediaFields || {};
+      return { year: f.year, scriptureReference: f.scriptureReference, notableQuote: f.speaker ? `— ${f.speaker}` : null };
+    }
+    default: return { year: null, scriptureReference: null, notableQuote: null };
+  }
+}
+
+/**
  * Receives `sermons` as a prop from getStaticProps. When the WordPress backend
  * is unreachable or empty, sermons will be [] and an empty state renders.
+ * Despite the name, sermons may be a mixed list of sermons/articles/blog/
+ * magazine/conference items — see the Featured Content ACF field on the
+ * home page in wp-admin.
  */
 export default function FeaturedSermons({ sermons = [] }) {
   return (
@@ -44,47 +112,49 @@ export default function FeaturedSermons({ sermons = [] }) {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sermons.map((sermon, index) => {
-              const fields = sermon.sermonFields || {};
-              const collectionName = sermon.sermonCollections?.nodes?.[0]?.name;
+            {sermons.map((node, index) => {
+              const collectionName = node.sermonCollections?.nodes?.[0]?.name;
+              const meta = metaForNode(node);
+              const label = labelForNode(node, collectionName);
+              const href = urlForNode(node);
               return (
                 <motion.div
-                  key={sermon.id}
+                  key={node.id}
                   initial={{ opacity: 0, y: 20 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}>
-                  <Link href={ROUTES.SermonDetail(sermon.slug)} className="group block">
+                  <Link href={href} className="group block">
                     <div className="bg-card border border-border rounded-xl p-6 h-full hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-500">
                       <div className="flex items-center gap-2 mb-4">
                         <span className="text-xs font-sans font-medium text-accent uppercase tracking-wider">
-                          {collectionName || "Sermon"}
+                          {label}
                         </span>
-                        {fields.year && (
+                        {meta.year && (
                           <>
                             <span className="text-border">·</span>
                             <span className="text-xs font-sans text-muted-foreground">
-                              {fields.year}
+                              {meta.year}
                             </span>
                           </>
                         )}
                       </div>
                       <h3 className="font-serif text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors line-clamp-2">
-                        {decodeEntities(sermon.title)}
+                        {decodeEntities(node.title)}
                       </h3>
-                      {fields.scriptureReference && (
+                      {meta.scriptureReference && (
                         <p className="text-sm font-sans text-primary/70 mb-3">
-                          {fields.scriptureReference}
+                          {meta.scriptureReference}
                         </p>
                       )}
-                      {sermon.excerpt && (
+                      {node.excerpt && (
                         <div
                           className="text-sm font-sans text-muted-foreground leading-relaxed line-clamp-3"
-                          dangerouslySetInnerHTML={{ __html: sermon.excerpt }} />
+                          dangerouslySetInnerHTML={{ __html: node.excerpt }} />
                       )}
-                      {fields.notableQuote && (
+                      {meta.notableQuote && (
                         <blockquote className="mt-4 pl-4 border-l-2 border-accent/30 text-sm font-serif italic text-muted-foreground line-clamp-2">
-                          "{decodeEntities(fields.notableQuote)}"
+                          "{decodeEntities(meta.notableQuote)}"
                         </blockquote>
                       )}
                     </div>

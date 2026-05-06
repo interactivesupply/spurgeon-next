@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import type { GetStaticProps } from "next";
 import { useLazyQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
-import { GET_FCB_ENTRY, GET_DEVOTIONAL_ENTRY_BY_ID } from "@/lib/queries";
+import { GET_FCB_ENTRY, GET_FCB_ENTRY_BY_ID } from "@/lib/queries";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
@@ -23,12 +24,24 @@ interface PageProps {
 }
 
 export default function FaithsCheckBook({ shared, previewEntry }: PageProps) {
+  const router = useRouter();
   const { month: initMonth, day: initDay } = todayKey();
   const [month, setMonth] = useState(initMonth);
   const [day, setDay] = useState(initDay);
 
+  // Honor ?month=&day= query params from /devotionals/<slug> redirects.
+  useEffect(() => {
+    if (!router.isReady) return;
+    const q = router.query;
+    if (typeof q.month === 'string' && MONTHS.includes(q.month)) setMonth(q.month);
+    if (typeof q.day === 'string') {
+      const d = parseInt(q.day, 10);
+      if (d >= 1 && d <= 31) setDay(d);
+    }
+  }, [router.isReady, router.query]);
+
   const [fetchEntry, { data, loading }] = useLazyQuery(GET_FCB_ENTRY);
-  const entry: any = previewEntry || (data as any)?.devotionalEntries?.nodes?.[0];
+  const entry: any = previewEntry || (data as any)?.faithsCheckBookEntries?.nodes?.[0];
 
   useEffect(() => {
     fetchEntry({ variables: { month, day: String(day) } });
@@ -105,9 +118,9 @@ export default function FaithsCheckBook({ shared, previewEntry }: PageProps) {
           </div>
         ) : entry ? (
           <div className="bg-card border border-border rounded-2xl p-8 mb-8">
-            {entry.devotionalEntryFields?.scripture && (
+            {entry.faithsCheckBookFields?.scripture && (
               <p className="font-serif text-base italic text-primary/80 mb-6 border-l-2 border-accent pl-4">
-                {entry.devotionalEntryFields.scripture}
+                {entry.faithsCheckBookFields.scripture}
               </p>
             )}
             {entry.title && (
@@ -130,7 +143,7 @@ export default function FaithsCheckBook({ shared, previewEntry }: PageProps) {
         <DevotionalSubscribeBox devotional="faiths_check_book" periods={["daily"]} />
       </div>
 
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
@@ -138,20 +151,20 @@ export default function FaithsCheckBook({ shared, previewEntry }: PageProps) {
 export const getStaticProps: GetStaticProps<PageProps> = async ({ preview, previewData }) => {
   const shared = await getSharedPageData();
   let previewEntry: any = null;
-  const previewId = preview && (previewData as any)?.postType === 'devotional_entry'
+  const previewId = preview && (previewData as any)?.postType === 'faiths_check_book'
     ? (previewData as any).postId
     : null;
   if (previewId) {
     try {
-      const { apolloClient } = await import('@/lib/apollo-client');
-      const { data } = await apolloClient.query({
-        query: GET_DEVOTIONAL_ENTRY_BY_ID,
+      const { apolloPreviewClient } = await import('@/lib/apollo-client');
+      const { data } = await apolloPreviewClient().query({
+        query: GET_FCB_ENTRY_BY_ID,
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',
       });
-      previewEntry = (data as any)?.devotionalEntry || null;
+      previewEntry = (data as any)?.faithsCheckBookEntry || null;
     } catch (err: any) {
-      console.error('[GetDevotionalEntryById preview failed]', err?.message);
+      console.error('[GetFaithsCheckBookEntryById preview failed]', err?.message);
     }
   }
   return { props: { shared, previewEntry }, revalidate: 3600 };

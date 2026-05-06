@@ -3,8 +3,13 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 import { motion, AnimatePresence } from "framer-motion";
 import { BookMarked, Newspaper, ChevronRight, Scroll, ArrowRight } from "lucide-react";
+import { iconFor } from "@/lib/icon-registry";
 
-const columns = [
+// Fallback content used when the editor-managed Navigation field group is
+// empty (fresh installs, or before someone seeds defaults). Mirrors the
+// shape returned by getSharedPageData().nav.headerSpurgeonWorks but with
+// Lucide components inlined directly (we keep this format for legacy reasons).
+const FALLBACK_COLUMNS = [
   {
     id: "sermons",
     label: "Sermons",
@@ -48,9 +53,30 @@ const columns = [
   },
 ];
 
-export default function SpurgeonWorksMenu() {
+/**
+ * Normalize the editor-managed mega-menu data into the shape this component
+ * uses (icon mapped to a component, links → {label, to}, cta → {label, to}).
+ * Returns null if there's nothing usable so the caller can fall back.
+ */
+function normalize(cols) {
+  if (!Array.isArray(cols) || cols.length === 0) return null;
+  return cols.map((c, i) => ({
+    id: c.id || `col-${i}`,
+    label: c.label || '',
+    icon: iconFor(c.icon),
+    description: c.description || '',
+    links: (c.links || []).map((l) => ({ label: l.label || '', to: l.url || '' })),
+    cta: c.ctaLabel ? { label: c.ctaLabel, to: c.ctaUrl || '' } : null,
+  }));
+}
+
+export default function SpurgeonWorksMenu({ columns: editorColumns }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef(null);
+
+  // Prefer the editor-managed columns; fall back to the hardcoded defaults
+  // when nothing has been seeded yet.
+  const columns = normalize(editorColumns) || FALLBACK_COLUMNS;
 
   const handleMouseEnter = () => { clearTimeout(timeoutRef.current); setOpen(true); };
   const handleMouseLeave = () => { timeoutRef.current = setTimeout(() => setOpen(false), 150); };
@@ -109,14 +135,16 @@ export default function SpurgeonWorksMenu() {
                         </li>
                       ))}
                     </ul>
-                    <Link
-                      href={col.cta.to}
-                      onClick={() => setOpen(false)}
-                      className="mt-auto flex items-center gap-1 font-sans text-xs text-accent hover:text-accent/80 transition-colors pt-2 border-t border-white/8"
-                    >
-                      {col.cta.label}
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
+                    {col.cta && col.cta.to && (
+                      <Link
+                        href={col.cta.to}
+                        onClick={() => setOpen(false)}
+                        className="mt-auto flex items-center gap-1 font-sans text-xs text-accent hover:text-accent/80 transition-colors pt-2 border-t border-white/8"
+                      >
+                        {col.cta.label}
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    )}
                   </div>
                 );
               })}

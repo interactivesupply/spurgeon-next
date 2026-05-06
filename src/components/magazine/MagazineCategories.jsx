@@ -1,16 +1,26 @@
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const categories = [
-  { value: "all", label: "All" },
-  { value: "spurgeon_article", label: "Spurgeon Articles" },
-  { value: "book_review", label: "Book Reviews" },
-  { value: "chapter_preview", label: "Chapter Previews" },
-  { value: "spurgeon_short", label: "Short Form" },
-  { value: "news_reports", label: "News & Reports" },
-];
-
-export default function MagazineCategories({ activeCategory, onCategoryChange }) {
+/**
+ * Renders the magazine category filter tabs from a list of taxonomy terms
+ * passed in by the page. Adds an "All" tab at the front. Order matches the
+ * order WPGraphQL returns the terms (creation order from the activation hook).
+ *
+ * If the page provides Algolia disjunctive facet counts (`counts` keyed by
+ * slug, plus `allCount`), the tab labels include the count — e.g. "Spurgeon
+ * Articles (4)". When counts aren't supplied, tabs render plain names.
+ */
+export default function MagazineCategories({ activeCategory, onCategoryChange, terms = [], counts, allCount }) {
+  const hasCounts = !!counts;
+  const formatLabel = (slug, name) => {
+    if (!hasCounts) return name;
+    const n = slug === "all" ? (allCount ?? 0) : (counts[slug] ?? 0);
+    return `${name} (${n})`;
+  };
+  const categories = [
+    { value: "all", label: formatLabel("all", "All") },
+    ...terms.map(t => ({ value: t.slug, label: formatLabel(t.slug, t.name) })),
+  ];
   return (
     <div className="bg-card">
       <div className="max-w-6xl mx-auto px-6">

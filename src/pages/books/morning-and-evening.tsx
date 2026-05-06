@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import type { GetStaticProps } from "next";
-import { useLazyQuery } from "@apollo/client/react";
+import { useQuery } from "@apollo/client/react";
 import { ROUTES } from "@/lib/routes";
-import { GET_DEVOTIONAL_ENTRY, GET_DEVOTIONAL_ENTRY_BY_ID } from "@/lib/queries";
+import { GET_DEVOTIONAL_ENTRY, GET_ME_ENTRY_BY_ID } from "@/lib/queries";
 import { ArrowLeft, Sun, Moon, ChevronLeft, ChevronRight } from "lucide-react";
 import DevotionalSubscribeBox from "@/components/books/DevotionalSubscribeBox";
 import FooterSection from "@/components/home/FooterSection";
@@ -24,24 +25,36 @@ interface PageProps {
 }
 
 export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
+  const router = useRouter();
   const { month: initMonth, day: initDay } = todayKey();
   const [month, setMonth] = useState(initMonth);
   const [day, setDay] = useState(initDay);
   const [period, setPeriod] = useState<"morning" | "evening">("morning");
 
-  const [fetchEntry, { data, loading }] = useLazyQuery(GET_DEVOTIONAL_ENTRY);
-  const entry: any = previewEntry || (data as any)?.devotionalEntries?.nodes?.[0];
-
+  // Honor ?month=&day=&period= query params (used by /devotionals/<slug>
+  // redirects so deep links open to the right entry).
   useEffect(() => {
-    fetchEntry({
-      variables: {
-        devotional: "morning_and_evening",
-        month,
-        day: String(day),
-        period,
-      },
-    });
-  }, [month, day, period, fetchEntry]);
+    if (!router.isReady) return;
+    const q = router.query;
+    if (typeof q.month === 'string' && MONTHS.includes(q.month)) setMonth(q.month);
+    if (typeof q.day === 'string') {
+      const d = parseInt(q.day, 10);
+      if (d >= 1 && d <= 31) setDay(d);
+    }
+    if (q.period === 'morning' || q.period === 'evening') setPeriod(q.period);
+  }, [router.isReady, router.query]);
+
+  // Fetch the entry whenever month/day/period changes. Skip on the very
+  // first render until the router has parsed any ?month=&day=&period= params,
+  // otherwise we'd query for today's date, then immediately requery when the
+  // URL params arrive — and Apollo's cache-first policy can stick on the
+  // first stale result.
+  const { data, loading } = useQuery(GET_DEVOTIONAL_ENTRY, {
+    variables: { month, day: String(day), period },
+    skip: !router.isReady,
+    fetchPolicy: 'cache-first',
+  });
+  const entry: any = previewEntry || (data as any)?.morningAndEveningEntries?.nodes?.[0];
 
   const daysInMonth = new Date(2024, MONTHS.indexOf(month) + 1, 0).getDate();
 
@@ -137,9 +150,9 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
           </div>
         ) : entry ? (
           <div className="bg-card border border-border rounded-2xl p-8 mb-8">
-            {entry.devotionalEntryFields?.scripture && (
+            {entry.morningAndEveningFields?.scripture && (
               <p className="font-serif text-base italic text-primary/80 mb-6 border-l-2 border-accent pl-4">
-                {entry.devotionalEntryFields.scripture}
+                {entry.morningAndEveningFields.scripture}
               </p>
             )}
             {entry.title && (
@@ -164,7 +177,7 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
           periods={["morning", "evening", "both"]} />
       </div>
 
-      <FooterSection settings={shared?.footer} />
+      <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
     </div>
   );
 }
@@ -172,20 +185,20 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
 export const getStaticProps: GetStaticProps<PageProps> = async ({ preview, previewData }) => {
   const shared = await getSharedPageData();
   let previewEntry: any = null;
-  const previewId = preview && (previewData as any)?.postType === 'devotional_entry'
+  const previewId = preview && (previewData as any)?.postType === 'morning_and_evening'
     ? (previewData as any).postId
     : null;
   if (previewId) {
     try {
-      const { apolloClient } = await import('@/lib/apollo-client');
-      const { data } = await apolloClient.query({
-        query: GET_DEVOTIONAL_ENTRY_BY_ID,
+      const { apolloPreviewClient } = await import('@/lib/apollo-client');
+      const { data } = await apolloPreviewClient().query({
+        query: GET_ME_ENTRY_BY_ID,
         variables: { id: String(previewId) },
         fetchPolicy: 'no-cache',
       });
-      previewEntry = (data as any)?.devotionalEntry || null;
+      previewEntry = (data as any)?.morningAndEveningEntry || null;
     } catch (err: any) {
-      console.error('[GetDevotionalEntryById preview failed]', err?.message);
+      console.error('[GetMorningAndEveningEntryById preview failed]', err?.message);
     }
   }
   return { props: { shared, previewEntry }, revalidate: 3600 };
