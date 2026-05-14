@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import type { GetStaticProps } from "next";
@@ -11,7 +11,7 @@ import FooterSection from "@/components/home/FooterSection";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 
 // ── Tab → CPT mapping. Single source of truth for what shows in each tab.
-// "Spurgeon's Works" = his own writings; "Center's Resources" = modern
+// "Spurgeon's Works" = his own writings; "Library's Resources" = modern
 // editorial / Library content. Tour stops and library staff are excluded
 // from search entirely.
 const SPURGEON_POST_TYPES = [
@@ -75,7 +75,11 @@ const POST_TYPE_LABELS: Record<string, string> = {
 // taxonomy. Map them into the actual post_type values.
 const LEGACY_TYPE_PARAM: Record<string, string> = {
   sermon: "spurgeon_sermon",
-  article: "magazine_article",
+  // "article" used to mean Sword & Trowel issues (magazine_article) when
+  // S&T was the only article-shaped CPT. The Center's modern editorial
+  // articles now live under spurgeon_article, which is what the Our
+  // Resources mega-menu and widgets target via ?type=article.
+  article: "spurgeon_article",
   blog: "spurgeon_blog",
   lecture: "conference_media", // lectures used to be magazine_article; now conference media
   book: "spurgeon_book",
@@ -87,6 +91,7 @@ interface FilterState {
   collections: string[];
   topics: string[];
   years: string[];
+  scriptures: string[];
 }
 
 interface FacetValue {
@@ -100,13 +105,21 @@ interface FacetData {
   collection: FacetValue[];
   topic: FacetValue[];
   year: FacetValue[];
+  scripture: FacetValue[];
 }
+
+// Algolia attribute behind the Scripture facet. The wp-search-with-algolia
+// plugin emits `taxonomies_hierarchical.scripture_chapter` as a book→chapter
+// tree (lvl0 = book, lvl1 = "Book > Chapter"); we facet on lvl0 so the
+// dropdown lists Bible books, mirroring the user's mental model.
+const SCRIPTURE_FACET_ATTR = 'taxonomies_hierarchical.scripture_chapter.lvl0';
 
 const EMPTY_FILTERS: FilterState = {
   postTypes: [],
   collections: [],
   topics: [],
   years: [],
+  scriptures: [],
 };
 
 const EMPTY_FACETS: FacetData = {
@@ -114,7 +127,35 @@ const EMPTY_FACETS: FacetData = {
   collection: [],
   topic: [],
   year: [],
+  scripture: [],
 };
+
+// router.query values are string | string[] | undefined; normalize to string[].
+function paramToArray(p: string | string[] | undefined): string[] {
+  if (p == null) return [];
+  return Array.isArray(p) ? p : [p];
+}
+
+// Project current state to URL query so back-nav restores it. Single-value
+// arrays are flattened so URLs stay short for the common case
+// (one collection, one type), but multiple values round-trip as repeated
+// params (`?collection=a&collection=b`).
+function stateToQuery(
+  q: string,
+  meta: "all" | "spurgeon" | "center",
+  filters: FilterState
+): Record<string, string | string[]> {
+  const out: Record<string, string | string[]> = {};
+  if (q) out.q = q;
+  if (meta !== "all") out.tab = meta;
+  const compact = (arr: string[]) => (arr.length === 1 ? arr[0] : arr);
+  if (filters.postTypes.length) out.type = compact(filters.postTypes);
+  if (filters.collections.length) out.collection = compact(filters.collections);
+  if (filters.topics.length) out.topic = compact(filters.topics);
+  if (filters.years.length) out.year = compact(filters.years);
+  if (filters.scriptures.length) out.scripture = compact(filters.scriptures);
+  return out;
+}
 
 interface SearchPageProps {
   shared: SharedPageData;
@@ -162,6 +203,9 @@ function buildFacetFilters(
   if (exclude !== "year" && f.years.length) {
     filters.push(f.years.map((y) => `year:${y}`));
   }
+  if (exclude !== "scripture" && f.scriptures.length) {
+    filters.push(f.scriptures.map((s) => `${SCRIPTURE_FACET_ATTR}:${s}`));
+  }
 
   return filters;
 }
@@ -172,6 +216,10 @@ export default function SearchPage({ shared }: SearchPageProps) {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const [query, setQuery] = useState("");
+  // Only hydrate the search input from URL on first mount. Filter/tab clicks
+  // also push to the URL (so back-nav restores them), but those URL updates
+  // must not clobber an in-flight, uncommitted draft in the search box.
+  const initialMountRef = useRef(true);
   const [meta, setMeta] = useState<"all" | "spurgeon" | "center">("all");
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [hits, setHits] = useState<ReshapedHit[]>([]);
@@ -202,7 +250,12 @@ export default function SearchPage({ shared }: SearchPageProps) {
         "collection",
         "topic",
         "year",
+        "scripture",
       ];
+      // Internal facet keys mostly match the Algolia attribute name 1:1;
+      // scripture is the exception (nested under taxonomies_hierarchical).
+      const facetAttr = (field: keyof FacetData): string =>
+        field === "scripture" ? SCRIPTURE_FACET_ATTR : field;
 
       const requests = [
         // Main: hits + counts for facets that are NOT currently filtering
@@ -211,7 +264,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
           query: q,
           hitsPerPage: HITS_PER_PAGE,
           page: 0,
-          facets: facetFields as string[],
+          facets: facetFields.map(facetAttr),
           facetFilters: buildFacetFilters(f, scopedTypes),
         },
         // One per facet — excluded from its own filter so its count list
@@ -220,7 +273,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
           indexName: ALGOLIA_INDEX,
           query: q,
           hitsPerPage: 0,
-          facets: [field as string],
+          facets: [facetAttr(field)],
           facetFilters: buildFacetFilters(f, scopedTypes, field),
         })),
       ];
@@ -243,10 +296,10 @@ export default function SearchPage({ shared }: SearchPageProps) {
         setTotalHits(main?.nbHits || 0);
 
         // Build the disjunctive facet data from the per-facet results.
-        const next: FacetData = { post_type: [], collection: [], topic: [], year: [] };
+        const next: FacetData = { post_type: [], collection: [], topic: [], year: [], scripture: [] };
         facetFields.forEach((field, i) => {
           const r: any = results[i + 1];
-          const counts = (r?.facets?.[field] || {}) as Record<string, number>;
+          const counts = (r?.facets?.[facetAttr(field)] || {}) as Record<string, number>;
           next[field] = Object.entries(counts)
             .map(([value, count]) => ({
               value,
@@ -312,70 +365,89 @@ export default function SearchPage({ shared }: SearchPageProps) {
     }
   }, [algolia, loadingMore, page, meta, query, filters, hits]);
 
-  // Hydrate state from URL on mount and whenever query params change. The
-  // mega menu drops users onto URLs like /search?type=sermon&collection=...
-  // each segment maps to a SearchFilters multi-select.
+  // The URL is the source of truth for committed search state. Filter and
+  // tab clicks push to the URL via router.replace; this effect hydrates
+  // state from the URL and triggers a fresh search whenever any of those
+  // params change. Result: back-navigation restores the prior filter set
+  // and result list automatically.
   useEffect(() => {
     if (!router.isReady) return;
     const q = (router.query.q as string) || "";
-    const t = (router.query.type as string) || "";
-    const c = (router.query.collection as string) || "";
-    const topic = (router.query.topic as string) || "";
-    const year = (router.query.year as string) || "";
+    const tab = (router.query.tab as string) || "";
+    const types = paramToArray(router.query.type as string | string[] | undefined)
+      .map((t) => LEGACY_TYPE_PARAM[t] || t)
+      .filter(Boolean);
+    const collections = paramToArray(router.query.collection as string | string[] | undefined);
+    const topics = paramToArray(router.query.topic as string | string[] | undefined);
+    const years = paramToArray(router.query.year as string | string[] | undefined);
+    const scriptures = paramToArray(router.query.scripture as string | string[] | undefined);
 
-    setSearchInput(q);
+    // Initialize the input from the URL only on first mount, so subsequent
+    // filter/tab changes don't blow away an uncommitted draft.
+    if (initialMountRef.current) {
+      setSearchInput(q);
+      initialMountRef.current = false;
+    }
     setQuery(q);
 
-    // Map legacy ?type= values to actual post_type strings.
-    const mappedType = LEGACY_TYPE_PARAM[t] || (t || "");
-
     let initialMeta: "all" | "spurgeon" | "center" = "all";
-    if (SPURGEON_POST_TYPES.includes(mappedType)) initialMeta = "spurgeon";
-    else if (CENTER_POST_TYPES.includes(mappedType)) initialMeta = "center";
+    if (tab === "spurgeon" || tab === "center") {
+      initialMeta = tab;
+    } else if (types.length > 0) {
+      // Legacy URLs without ?tab=: infer the tab from the selected types.
+      if (types.every((t) => SPURGEON_POST_TYPES.includes(t))) initialMeta = "spurgeon";
+      else if (types.every((t) => CENTER_POST_TYPES.includes(t))) initialMeta = "center";
+    }
     setMeta(initialMeta);
 
     const initialFilters: FilterState = {
-      postTypes: mappedType ? [mappedType] : [],
-      collections: c ? [c] : [],
-      topics: topic ? [topic] : [],
-      years: year ? [year] : [],
+      postTypes: types,
+      collections,
+      topics,
+      years,
+      scriptures,
     };
     setFilters(initialFilters);
     runSearch(q, initialMeta, initialFilters);
   }, [
     router.isReady,
     router.query.q,
+    router.query.tab,
     router.query.type,
     router.query.collection,
     router.query.topic,
     router.query.year,
+    router.query.scripture,
     runSearch,
   ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setQuery(searchInput);
-    runSearch(searchInput, meta, filters);
     router.replace(
-      { pathname: "/search", query: searchInput ? { q: searchInput } : {} },
+      { pathname: "/search", query: stateToQuery(searchInput, meta, filters) },
       undefined,
       { shallow: true }
     );
   };
 
   const switchMeta = (newMeta: "all" | "spurgeon" | "center") => {
-    setMeta(newMeta);
     // Clear post-type selection when switching tabs, since the available
     // types differ. Other filters carry over (collection/topic/year are
     // tab-agnostic).
-    const reset = { ...filters, postTypes: [] };
-    setFilters(reset);
-    runSearch(query, newMeta, reset);
+    const next: FilterState = { ...filters, postTypes: [] };
+    router.replace(
+      { pathname: "/search", query: stateToQuery(query, newMeta, next) },
+      undefined,
+      { shallow: true }
+    );
   };
 
   const updateFilters = (next: FilterState) => {
-    setFilters(next);
-    runSearch(query, meta, next);
+    router.replace(
+      { pathname: "/search", query: stateToQuery(query, meta, next) },
+      undefined,
+      { shallow: true }
+    );
   };
 
   return (
@@ -397,7 +469,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
             {[
               { value: "all", label: "All" },
               { value: "spurgeon", label: "Spurgeon's Works" },
-              { value: "center", label: "The Center's Resources" },
+              { value: "center", label: "The Library's Resources" },
             ].map((tab) => (
               <button
                 key={tab.value}
@@ -420,17 +492,19 @@ export default function SearchPage({ shared }: SearchPageProps) {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search by title, scripture, topic, or keyword..."
-              className="w-full bg-background border border-border rounded-xl py-4 pl-12 pr-24 font-sans text-base text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all" />
+              className="w-full bg-background border border-border rounded-xl py-4 pl-12 pr-32 font-sans text-base text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all" />
             {searchInput && (
               <button
                 type="button"
                 onClick={() => {
                   setSearchInput("");
-                  setQuery("");
-                  runSearch("", meta, filters);
-                  router.replace({ pathname: "/search" }, undefined, { shallow: true });
+                  router.replace(
+                    { pathname: "/search", query: stateToQuery("", meta, filters) },
+                    undefined,
+                    { shallow: true }
+                  );
                 }}
-                className="absolute right-20 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                className="absolute right-28 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                 <X className="w-4 h-4" />
               </button>
             )}

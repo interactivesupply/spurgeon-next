@@ -3,23 +3,31 @@ import { Badge } from "@/components/ui/badge";
 import MultiSelect from "./MultiSelect";
 
 /**
- * All four dropdowns are now populated from Algolia disjunctive facets passed
- * in via the `facets` prop. Each entry is { value, count, label? }. The page
+ * All five dropdowns are populated from Algolia disjunctive facets passed in
+ * via the `facets` prop. Each entry is { value, count, label? }. The page
  * computes these by issuing N+1 search requests (one main + one per facet
  * with that facet's filter excluded), so a dropdown's value list reflects
  * "what's available given my OTHER selections".
  *
- * We still render the Scripture filter as a hardcoded Bible-book list for
- * now — it's a separate concern (no structured `scripture_book` field on
- * the Algolia records yet).
+ * Scripture options come from the hierarchical scripture_chapter taxonomy
+ * (lvl0 = book name); ordered by Bible book where the value matches a known
+ * book, with anything unrecognized appended alphabetically.
  */
 
-// Scripture filter is hardcoded until we add a `scripture_book` field at
-// index time. For now it falls through as a search-query enhancement (page-side).
-const SCRIPTURE_BOOKS = [
-  "Genesis", "Psalms", "Isaiah", "Matthew", "John", "Romans",
-  "Ephesians", "Philippians", "Hebrews", "Revelation",
-].map((b) => ({ value: b, label: b }));
+// Canonical Bible book order for the Scripture dropdown. Books absent from
+// this list (e.g. apocryphal references) fall to the bottom alphabetically.
+const BIBLE_BOOK_ORDER = [
+  "Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth",
+  "1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra",
+  "Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon",
+  "Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos",
+  "Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi",
+  "Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians",
+  "Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians",
+  "1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter",
+  "1 John","2 John","3 John","Jude","Revelation",
+];
+const BOOK_RANK = Object.fromEntries(BIBLE_BOOK_ORDER.map((b, i) => [b, i]));
 
 function toOptions(facetValues = []) {
   return facetValues.map((v) => ({
@@ -35,6 +43,16 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
   // Year facet: present numerically, descending.
   const yearOptions = toOptions(
     [...(facets.year || [])].sort((a, b) => Number(b.value) - Number(a.value))
+  );
+  // Scripture facet: re-sort by canonical Bible book order so Genesis comes
+  // before Revelation (Algolia returns by count desc, which feels random).
+  const scriptureOptions = toOptions(
+    [...(facets.scripture || [])].sort((a, b) => {
+      const ra = BOOK_RANK[a.value] ?? Infinity;
+      const rb = BOOK_RANK[b.value] ?? Infinity;
+      if (ra !== rb) return ra - rb;
+      return a.value.localeCompare(b.value);
+    })
   );
 
   return (
@@ -53,7 +71,7 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
           placeholder="All Collections"
         />
         <MultiSelect
-          options={SCRIPTURE_BOOKS}
+          options={scriptureOptions}
           value={filters.scriptures || []}
           onChange={(val) => onFilterChange({ ...filters, scriptures: val })}
           placeholder="Scripture"
