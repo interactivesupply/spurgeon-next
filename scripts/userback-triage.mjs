@@ -88,8 +88,18 @@ async function listItems({ statusName = 'open' } = {}) {
   const filter = encodeURIComponent(
     `projectId eq ${PROJECT_ID} and workflowId eq ${statusId}`
   );
-  const json = await api(`/feedback?filter=${filter}&per_page=100`);
-  const items = json?.data || [];
+  // Userback caps pageSize at 10 server-side regardless of per_page, so walk
+  // the pages until _pagination says we've seen everything.
+  const items = [];
+  let page = 1;
+  while (true) {
+    const json = await api(`/feedback?filter=${filter}&page=${page}`);
+    const batch = json?.data || [];
+    items.push(...batch);
+    const totalPages = json?._pagination?.totalPages ?? 1;
+    if (page >= totalPages || batch.length === 0) break;
+    page += 1;
+  }
   if (items.length === 0) {
     console.log(`No items in "${statusName}" status for the Spurgeon project.`);
     return;
