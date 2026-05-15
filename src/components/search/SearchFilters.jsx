@@ -1,6 +1,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import MultiSelect from "./MultiSelect";
+import { bookRank } from "@/lib/bible";
 
 /**
  * All five dropdowns are populated from Algolia disjunctive facets passed in
@@ -14,20 +15,6 @@ import MultiSelect from "./MultiSelect";
  * book, with anything unrecognized appended alphabetically.
  */
 
-// Canonical Bible book order for the Scripture dropdown. Books absent from
-// this list (e.g. apocryphal references) fall to the bottom alphabetically.
-const BIBLE_BOOK_ORDER = [
-  "Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Joshua","Judges","Ruth",
-  "1 Samuel","2 Samuel","1 Kings","2 Kings","1 Chronicles","2 Chronicles","Ezra",
-  "Nehemiah","Esther","Job","Psalms","Proverbs","Ecclesiastes","Song of Solomon",
-  "Isaiah","Jeremiah","Lamentations","Ezekiel","Daniel","Hosea","Joel","Amos",
-  "Obadiah","Jonah","Micah","Nahum","Habakkuk","Zephaniah","Haggai","Zechariah","Malachi",
-  "Matthew","Mark","Luke","John","Acts","Romans","1 Corinthians","2 Corinthians",
-  "Galatians","Ephesians","Philippians","Colossians","1 Thessalonians","2 Thessalonians",
-  "1 Timothy","2 Timothy","Titus","Philemon","Hebrews","James","1 Peter","2 Peter",
-  "1 John","2 John","3 John","Jude","Revelation",
-];
-const BOOK_RANK = Object.fromEntries(BIBLE_BOOK_ORDER.map((b, i) => [b, i]));
 
 function toOptions(facetValues = []) {
   return facetValues.map((v) => ({
@@ -52,8 +39,8 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
   // before Revelation (Algolia returns by count desc, which feels random).
   const scriptureOptions = toOptions(
     [...(facets.scripture || [])].sort((a, b) => {
-      const ra = BOOK_RANK[a.value] ?? Infinity;
-      const rb = BOOK_RANK[b.value] ?? Infinity;
+      const ra = bookRank(a.value);
+      const rb = bookRank(b.value);
       if (ra !== rb) return ra - rb;
       return a.value.localeCompare(b.value);
     })

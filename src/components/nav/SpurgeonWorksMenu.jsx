@@ -19,7 +19,7 @@ const FALLBACK_COLUMNS = [
       { label: "All Sermons", to: ROUTES.Search + "?type=sermon" },
       { label: "New Park Street Pulpit", to: ROUTES.Search + "?collection=new-park-street-pulpit" },
       { label: "Metropolitan Tabernacle", to: ROUTES.Search + "?collection=metropolitan-tabernacle-pulpit" },
-      { label: "Search by Scripture", to: ROUTES.Search + "?type=sermon" },
+      { label: "Browse by Scripture", to: "/sermons/scripture" },
       { label: "Browse by Year", to: ROUTES.Search + "?type=sermon" },
     ],
     cta: { label: "Browse all sermons", to: ROUTES.Search + "?type=sermon" },

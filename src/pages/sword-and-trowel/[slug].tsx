@@ -104,14 +104,37 @@ export default function MagazineArticlePage({ article, shared }: ArticlePageProp
         <div className="h-px bg-border mb-8" />
 
         {fields.pdfUrl ? (
-          <a
-            href={fields.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-sans text-sm font-medium">
-            <FileText className="w-4 h-4" />
-            Download PDF
-          </a>
+          <>
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <a
+                href={fields.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors font-sans text-sm font-medium">
+                <FileText className="w-4 h-4" />
+                Open in new tab
+              </a>
+              <a
+                href={fields.pdfUrl}
+                download
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border hover:border-primary/40 text-foreground hover:text-primary transition-colors font-sans text-sm font-medium">
+                Download
+              </a>
+            </div>
+            {/* Inline PDF viewer — uses the browser's built-in renderer so
+                readers don't have to leave the page to read the issue
+                (Userback #7654209). Fixed-height container with native
+                scrolling inside the iframe; the "Open in new tab" link
+                above gives a full-screen alternative on mobile where
+                inline PDF rendering can be flaky. */}
+            <div className="rounded-xl overflow-hidden border border-border bg-muted shadow-sm">
+              <iframe
+                src={fields.pdfUrl}
+                title={`${decodeEntities(article.title)} — PDF`}
+                className="w-full h-[80vh] min-h-[600px] bg-white"
+              />
+            </div>
+          </>
         ) : (
           <p className="font-sans text-sm text-muted-foreground italic">
             PDF not yet available for this issue.

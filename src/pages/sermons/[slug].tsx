@@ -8,6 +8,7 @@ import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities, stripDuplicatedTitle } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
+import RelatedSermons from "@/components/sermons/RelatedSermons";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
@@ -175,6 +176,13 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
           <div
             className="sermon-content font-charter text-[22px] text-foreground/90 leading-[1.8]"
             dangerouslySetInnerHTML={{ __html: stripDuplicatedTitle(sermon.content, sermon.title) }} />
+        )}
+
+        {sermon.databaseId && (
+          <RelatedSermons
+            postId={sermon.databaseId}
+            scriptureReference={fields.scriptureReference}
+            collectionSlug={collectionSlug} />
         )}
       </motion.div>
       <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />

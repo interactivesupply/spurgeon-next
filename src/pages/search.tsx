@@ -92,6 +92,7 @@ interface FilterState {
   topics: string[];
   years: string[];
   scriptures: string[];
+  scriptureChapters: string[];
 }
 
 interface FacetValue {
@@ -113,6 +114,12 @@ interface FacetData {
 // tree (lvl0 = book, lvl1 = "Book > Chapter"); we facet on lvl0 so the
 // dropdown lists Bible books, mirroring the user's mental model.
 const SCRIPTURE_FACET_ATTR = 'taxonomies_hierarchical.scripture_chapter.lvl0';
+// Chapter-level filter attribute, used for ?scripture_chapter=Romans+10
+// links coming from the /sermons/scripture/[book] drill-down pages.
+// Values match the lvl1 facet shape: just the bare "Romans 10" form
+// (taxonomies.scripture_chapter), which is what Algolia indexes directly
+// alongside the hierarchical breakdown.
+const SCRIPTURE_CHAPTER_FACET_ATTR = 'taxonomies.scripture_chapter';
 
 const EMPTY_FILTERS: FilterState = {
   postTypes: [],
@@ -120,6 +127,7 @@ const EMPTY_FILTERS: FilterState = {
   topics: [],
   years: [],
   scriptures: [],
+  scriptureChapters: [],
 };
 
 const EMPTY_FACETS: FacetData = {
@@ -154,6 +162,7 @@ function stateToQuery(
   if (filters.topics.length) out.topic = compact(filters.topics);
   if (filters.years.length) out.year = compact(filters.years);
   if (filters.scriptures.length) out.scripture = compact(filters.scriptures);
+  if (filters.scriptureChapters.length) out.scripture_chapter = compact(filters.scriptureChapters);
   return out;
 }
 
@@ -205,6 +214,12 @@ function buildFacetFilters(
   }
   if (exclude !== "scripture" && f.scriptures.length) {
     filters.push(f.scriptures.map((s) => `${SCRIPTURE_FACET_ATTR}:${s}`));
+  }
+  // Chapter-level scripture filter (independent from the book-level
+  // dropdown). Sourced from ?scripture_chapter= URL params on the
+  // /sermons/scripture drill-down pages.
+  if (f.scriptureChapters.length) {
+    filters.push(f.scriptureChapters.map((c) => `${SCRIPTURE_CHAPTER_FACET_ATTR}:${c}`));
   }
 
   return filters;
@@ -392,6 +407,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
     const topics = paramToArray(router.query.topic as string | string[] | undefined);
     const years = paramToArray(router.query.year as string | string[] | undefined);
     const scriptures = paramToArray(router.query.scripture as string | string[] | undefined);
+    const scriptureChapters = paramToArray(router.query.scripture_chapter as string | string[] | undefined);
 
     // Initialize the input from the URL only on first mount, so subsequent
     // filter/tab changes don't blow away an uncommitted draft.
@@ -417,6 +433,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
       topics,
       years,
       scriptures,
+      scriptureChapters,
     };
     setFilters(initialFilters);
     runSearch(q, initialMeta, initialFilters);
@@ -429,6 +446,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
     router.query.topic,
     router.query.year,
     router.query.scripture,
+    router.query.scripture_chapter,
     runSearch,
   ]);
 
@@ -543,17 +561,28 @@ export default function SearchPage({ shared }: SearchPageProps) {
             ))}
           </div>
         ) : hits.length === 0 ? (
-          <div className="text-center py-20">
-            <BookOpen className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
-            <h3 className="font-serif text-xl text-foreground mb-2">
-              {query || filters.postTypes.length > 0 ? "No results found" : "Begin your search"}
-            </h3>
-            <p className="font-sans text-sm text-muted-foreground max-w-md mx-auto">
-              {query || filters.postTypes.length > 0
-                ? "Try adjusting your search terms or filters."
-                : "Search through Spurgeon's sermons, articles, books, and lectures by title, scripture reference, topic, or keyword."}
-            </p>
-          </div>
+          (() => {
+            const anyFilterActive = !!query
+              || filters.postTypes.length > 0
+              || filters.collections.length > 0
+              || filters.topics.length > 0
+              || filters.years.length > 0
+              || filters.scriptures.length > 0
+              || filters.scriptureChapters.length > 0;
+            return (
+              <div className="text-center py-20">
+                <BookOpen className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
+                <h3 className="font-serif text-xl text-foreground mb-2">
+                  {anyFilterActive ? "No results found" : "Begin your search"}
+                </h3>
+                <p className="font-sans text-sm text-muted-foreground max-w-md mx-auto">
+                  {anyFilterActive
+                    ? "Try adjusting your search terms or filters."
+                    : "Search through Spurgeon's sermons, articles, books, and lectures by title, scripture reference, topic, or keyword."}
+                </p>
+              </div>
+            );
+          })()
         ) : (
           <>
             <div className="mt-2">
