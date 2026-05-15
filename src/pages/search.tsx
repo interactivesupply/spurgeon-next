@@ -116,10 +116,11 @@ interface FacetData {
 const SCRIPTURE_FACET_ATTR = 'taxonomies_hierarchical.scripture_chapter.lvl0';
 // Chapter-level filter attribute, used for ?scripture_chapter=Romans+10
 // links coming from the /sermons/scripture/[book] drill-down pages.
-// Values match the lvl1 facet shape: just the bare "Romans 10" form
-// (taxonomies.scripture_chapter), which is what Algolia indexes directly
-// alongside the hierarchical breakdown.
-const SCRIPTURE_CHAPTER_FACET_ATTR = 'taxonomies.scripture_chapter';
+// Those links emit the parent-prefixed form ("Exodus > Exodus 12"), so
+// we facet on the hierarchical lvl1 attribute (Algolia's flat
+// taxonomies.scripture_chapter stores just "Exodus 12" without the
+// parent prefix and would never match).
+const SCRIPTURE_CHAPTER_FACET_ATTR = 'taxonomies_hierarchical.scripture_chapter.lvl1';
 
 const EMPTY_FILTERS: FilterState = {
   postTypes: [],
