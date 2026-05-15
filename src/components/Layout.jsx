@@ -251,7 +251,6 @@ export default function Layout({ children, nav }) {
                       { label: "Ministry Lectures", to: ROUTES.Search + "?q=ministry&type=lecture" },
                       { label: "All Conference Media", to: ROUTES.Search + "?type=conference_media" },
                       { label: "Annual Conference", to: ROUTES.Search + "?q=conference" },
-                      { label: "Symposiums", to: ROUTES.Search + "?q=symposium" },
                     ],
                   },
                 ]}
