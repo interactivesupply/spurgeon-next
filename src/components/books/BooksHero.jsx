@@ -3,10 +3,21 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
 import { BookMarked, ArrowLeft } from "lucide-react";
 
+// Hero background — Treasury of David volumes from Spurgeon's personal
+// library, sourced from MBTS's Flickr album. The dark overlay below keeps
+// the photo recognizable while preserving text contrast.
+const HERO_IMAGE = 'https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/05/spurgeon-treasury-of-david-books.jpg';
+
 export default function BooksHero() {
   return (
-    <div className="bg-foreground text-primary-foreground">
-      <div className="max-w-5xl mx-auto px-6 py-14">
+    <div className="relative bg-foreground text-primary-foreground overflow-hidden">
+      <div
+        className="absolute inset-0 bg-cover bg-center opacity-25"
+        style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+        aria-hidden="true"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-foreground/95 via-foreground/70 to-foreground/40" aria-hidden="true" />
+      <div className="relative max-w-5xl mx-auto px-6 py-14">
         <Link
           href={ROUTES.Library}
           className="inline-flex items-center gap-1.5 text-primary-foreground/40 hover:text-primary-foreground transition-colors font-sans text-sm mb-8"
@@ -21,7 +32,7 @@ export default function BooksHero() {
         <h1 className="font-serif text-4xl md:text-6xl font-bold text-primary-foreground mb-4">
           Spurgeon's Books
         </h1>
-        <p className="font-sans text-primary-foreground/50 text-lg max-w-xl leading-relaxed">
+        <p className="font-sans text-primary-foreground/60 text-lg max-w-xl leading-relaxed">
           Devotionals, biblical commentary, theology, and pastoral wisdom — a lifetime of writing.
         </p>
       </div>

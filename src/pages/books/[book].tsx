@@ -97,41 +97,67 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between gap-3 mb-8">
-              <button
-                onClick={() => setChapterIdx(i => Math.max(0, i - 1))}
-                disabled={chapterIdx === 0}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30 flex-shrink-0">
-                <ChevronLeft className="w-4 h-4" />
-                Previous
-              </button>
-              <select
-                value={chapterIdx}
-                onChange={(e) => setChapterIdx(Number(e.target.value))}
-                className="flex-1 min-w-0 bg-card border border-border rounded-lg px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary/40 max-w-md">
-                {sorted.map((c, i) => {
-                  const num = c.bookChapterFields?.chapterNumber ?? i + 1;
-                  // Gleanings is a curated set of devotions numbered 26–125
-                  // in the source — surfacing those raw numbers in the
-                  // chapter selector is more confusing than helpful, so
-                  // we drop the number prefix for this book.
-                  const showNumber = bookSlug !== 'gleanings-among-the-sheaves';
-                  const title = decodeEntities(c.title || `Chapter ${num}`);
-                  return (
-                    <option key={c.databaseId ?? i} value={i}>
-                      {showNumber ? `${num}. ${title}` : title}
-                    </option>
-                  );
-                })}
-              </select>
-              <button
-                onClick={() => setChapterIdx(i => Math.min(sorted.length - 1, i + 1))}
-                disabled={chapterIdx === sorted.length - 1}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30 flex-shrink-0">
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
+            {/*
+              Gleanings reads as a devotional collection rather than a
+              chaptered book — 100 short reflections that don't have a
+              meaningful linear ordering. Showing a 100-option dropdown
+              and chapter numbers feels overwhelming and "book-like"
+              (Userback #7692117). For this CPT we drop the dropdown
+              and present a simple devotional flow: prev / position /
+              next.
+            */}
+            {bookSlug === 'gleanings-among-the-sheaves' ? (
+              <div className="flex items-center justify-between gap-3 mb-8">
+                <button
+                  onClick={() => setChapterIdx(i => Math.max(0, i - 1))}
+                  disabled={chapterIdx === 0}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30 flex-shrink-0">
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <span className="font-sans text-sm text-muted-foreground">
+                  Reflection {chapterIdx + 1} of {sorted.length}
+                </span>
+                <button
+                  onClick={() => setChapterIdx(i => Math.min(sorted.length - 1, i + 1))}
+                  disabled={chapterIdx === sorted.length - 1}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30 flex-shrink-0">
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 mb-8">
+                <button
+                  onClick={() => setChapterIdx(i => Math.max(0, i - 1))}
+                  disabled={chapterIdx === 0}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30 flex-shrink-0">
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+                <select
+                  value={chapterIdx}
+                  onChange={(e) => setChapterIdx(Number(e.target.value))}
+                  className="flex-1 min-w-0 bg-card border border-border rounded-lg px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary/40 max-w-md">
+                  {sorted.map((c, i) => {
+                    const num = c.bookChapterFields?.chapterNumber ?? i + 1;
+                    const title = decodeEntities(c.title || `Chapter ${num}`);
+                    return (
+                      <option key={c.databaseId ?? i} value={i}>
+                        {num}. {title}
+                      </option>
+                    );
+                  })}
+                </select>
+                <button
+                  onClick={() => setChapterIdx(i => Math.min(sorted.length - 1, i + 1))}
+                  disabled={chapterIdx === sorted.length - 1}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30 flex-shrink-0">
+                  Next
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
 
             {current && (
               <article>
