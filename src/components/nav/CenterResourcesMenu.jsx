@@ -77,7 +77,7 @@ export default function CenterResourcesMenu({ columns: editorColumns }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.18 }}
-            className="absolute top-full right-0 mt-4 w-[600px] bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
+            className="absolute top-full left-1/2 -translate-x-1/2 mt-4 w-[600px] bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50"
           >
             <div className="px-6 py-4 border-b border-white/8">
               <p className="font-sans text-xs text-primary-foreground/40 uppercase tracking-widest">
