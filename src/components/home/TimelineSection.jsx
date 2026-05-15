@@ -1,5 +1,6 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { decodeEntities } from "@/lib/utils";
 
 const DEFAULT_MILESTONES = [
@@ -29,19 +30,89 @@ export default function TimelineSection({ eyebrow, heading, milestones }) {
 
   const scrollRef = useRef(null);
   const [activeDot, setActiveDot] = useState(0);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  // Drag state lives in a ref so we can update it inside event handlers
+  // without re-rendering on every mousemove.
+  const dragRef = useRef({ isDown: false, startX: 0, startScrollLeft: 0, moved: false });
+  const [isDragging, setIsDragging] = useState(false);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const maxScroll = scrollWidth - clientWidth;
+    const idx = maxScroll > 0 ? Math.round((scrollLeft / maxScroll) * (DOT_COUNT - 1)) : 0;
+    setActiveDot(Math.min(idx, DOT_COUNT - 1));
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft < maxScroll - 2);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
-      const { scrollLeft, scrollWidth, clientWidth } = el;
-      const maxScroll = scrollWidth - clientWidth;
-      const idx = Math.round((scrollLeft / maxScroll) * (DOT_COUNT - 1));
-      setActiveDot(Math.min(idx, DOT_COUNT - 1));
+    updateScrollState();
+    el.addEventListener("scroll", updateScrollState, { passive: true });
+    window.addEventListener("resize", updateScrollState);
+    return () => {
+      el.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
     };
-    el.addEventListener("scroll", onScroll, { passive: true });
-    return () => el.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [updateScrollState]);
+
+  const scrollByPage = (direction) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Scroll ~80% of the visible width so users see a few new milestones
+    // without losing context on either side.
+    el.scrollBy({ left: direction * el.clientWidth * 0.8, behavior: "smooth" });
+  };
+
+  // Pointer-based drag-to-scroll. Pointer events handle mouse, touch, and
+  // pen uniformly, and setPointerCapture keeps the drag alive even if the
+  // cursor leaves the strip mid-swipe.
+  const onPointerDown = (e) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    // Allow native touch scrolling to still work — only intercept mouse/pen.
+    if (e.pointerType === "touch") return;
+    dragRef.current = {
+      isDown: true,
+      startX: e.clientX,
+      startScrollLeft: el.scrollLeft,
+      moved: false,
+    };
+    el.setPointerCapture?.(e.pointerId);
+    setIsDragging(true);
+  };
+
+  const onPointerMove = (e) => {
+    const drag = dragRef.current;
+    if (!drag.isDown) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const dx = e.clientX - drag.startX;
+    if (Math.abs(dx) > 4) drag.moved = true;
+    el.scrollLeft = drag.startScrollLeft - dx;
+  };
+
+  const endDrag = (e) => {
+    if (!dragRef.current.isDown) return;
+    dragRef.current.isDown = false;
+    setIsDragging(false);
+    const el = scrollRef.current;
+    if (el && e?.pointerId != null) el.releasePointerCapture?.(e.pointerId);
+  };
+
+  // Swallow click events that bubble up from a drag so a milestone with a
+  // future <Link> wrapper wouldn't navigate after a drag-release.
+  const onClickCapture = (e) => {
+    if (dragRef.current.moved) {
+      e.preventDefault();
+      e.stopPropagation();
+      dragRef.current.moved = false;
+    }
+  };
 
   return (
     <section className="bg-[hsl(var(--foreground))] py-24 md:py-36">
@@ -59,7 +130,45 @@ export default function TimelineSection({ eyebrow, heading, milestones }) {
         </motion.div>
       </div>
 
-      <div ref={scrollRef} className="overflow-x-auto pb-6 mt-2 px-6">
+      <div className="relative">
+        {/* Left arrow */}
+        <button
+          type="button"
+          aria-label="Scroll timeline left"
+          onClick={() => scrollByPage(-1)}
+          disabled={!canScrollLeft}
+          className={`hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[hsl(var(--card))] border border-border items-center justify-center shadow-md transition-opacity ${
+            canScrollLeft ? "opacity-100 hover:bg-accent hover:text-black" : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+        {/* Right arrow */}
+        <button
+          type="button"
+          aria-label="Scroll timeline right"
+          onClick={() => scrollByPage(1)}
+          disabled={!canScrollRight}
+          className={`hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[hsl(var(--card))] border border-border items-center justify-center shadow-md transition-opacity ${
+            canScrollRight ? "opacity-100 hover:bg-accent hover:text-black" : "opacity-0 pointer-events-none"
+          }`}
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+        <div
+          ref={scrollRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onClickCapture={onClickCapture}
+          className={`overflow-x-auto pb-6 mt-2 px-6 select-none ${
+            isDragging ? "cursor-grabbing" : "cursor-grab"
+          }`}
+          style={{ scrollBehavior: isDragging ? "auto" : undefined }}
+        >
         <div className="flex items-start" style={{ width: `${items.length * 200}px` }}>
           {items.map((milestone, index) => (
             <motion.div
@@ -88,6 +197,7 @@ export default function TimelineSection({ eyebrow, heading, milestones }) {
               </div>
             </motion.div>
           ))}
+        </div>
         </div>
       </div>
 
