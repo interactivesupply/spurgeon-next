@@ -51,3 +51,22 @@ export function stripHtml(input: string | null | undefined): string {
   if (!input) return '';
   return decodeEntities(input.replace(/<[^>]+>/g, '')).replace(/\s+/g, ' ').trim();
 }
+
+/**
+ * Strip a leading heading tag from imported body HTML when its text content
+ * matches the post's title (and any immediately-following empty paragraphs).
+ * Spurgeon sermon imports embed `<h2>Title</h2>` at the top of post_content,
+ * which renders as a duplicate of the page title shown above (Userback
+ * #7655929). Keeps any opening wrapper <div> intact.
+ */
+export function stripDuplicatedTitle(html: string | null | undefined, title: string | null | undefined): string {
+  if (!html || !title) return html || '';
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return html.replace(
+    new RegExp(
+      `((?:<div[^>]*>\\s*)?)\\s*<h[1-5][^>]*>\\s*${escaped}\\s*</h[1-5]>\\s*(?:<p[^>]*>(?:\\s|&nbsp;|<br\\s*/?>)*</p>\\s*)*`,
+      'i'
+    ),
+    '$1'
+  );
+}

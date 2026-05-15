@@ -1,13 +1,16 @@
 import React, { useMemo, useRef, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { format, addMonths, startOfMonth } from "date-fns";
+import { format, addMonths } from "date-fns";
 
-// Generate all monthly editions from January 1865 to today
+// The Sword and the Trowel ran monthly from January 1865 through
+// December 1892 (the last issue published before Spurgeon's death cut
+// the magazine short). The timeline shows every month in that window;
+// extending past Dec 1892 only surfaces empty editions.
 function generateEditions() {
   const editions = [];
   let current = new Date(1865, 0, 1); // Jan 1865
-  const now = startOfMonth(new Date());
-  while (current <= now) {
+  const end = new Date(1892, 11, 1);  // Dec 1892 (inclusive)
+  while (current <= end) {
     editions.push(format(current, "MMMM yyyy"));
     current = addMonths(current, 1);
   }

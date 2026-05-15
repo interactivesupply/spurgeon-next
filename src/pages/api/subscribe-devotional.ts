@@ -25,13 +25,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     await Promise.all([
-      mg.messages.create(MAILGUN_DOMAIN, {
+      mg().messages.create(MAILGUN_DOMAIN, {
         from: NOTIFY_FROM,
         to: [email],
         subject: `You're subscribed to ${devotionalLabel}`,
         text: `Thank you for subscribing! You'll receive the ${devotionalLabel}${periodLabel} devotional in your inbox each day.\n\n— The Spurgeon Center`,
       }),
-      mg.messages.create(MAILGUN_DOMAIN, {
+      mg().messages.create(MAILGUN_DOMAIN, {
         from: NOTIFY_FROM,
         to: [NOTIFY_TO],
         subject: `New devotional subscriber: ${devotionalLabel}`,

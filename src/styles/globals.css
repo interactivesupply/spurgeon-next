@@ -96,10 +96,35 @@
     margin-bottom: 1.5rem;
     line-height: 1.8;
   }
-  .sermon-content h2,
-  .sermon-content h3 {
-    margin-top: 2rem;
+  /* Tailwind's preflight resets h1-h6 to inherit size+weight, so without
+     these the headings inside body content render at the same size as the
+     surrounding paragraph and read as "headings smaller than body text". */
+  .sermon-content h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 2.25rem;
     margin-bottom: 1rem;
+  }
+  .sermon-content h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    line-height: 1.35;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .sermon-content h4 {
+    font-size: 1.1em;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  /* Trailing "Dec. 31"-style date paragraph in devotional entries
+     (Faith's Check Book, Morning & Evening). The date is already shown at
+     the top of the reader, so the redundant tail copy is hidden. */
+  .sermon-content p.Date {
+    display: none;
   }
 }
 

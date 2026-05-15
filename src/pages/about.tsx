@@ -10,6 +10,7 @@ import { apolloClient } from "@/lib/apollo-client";
 import { GET_ABOUT_PAGE_CONTENT } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
+import ReactMarkdown from "react-markdown";
 
 interface AboutSection {
   title: string;
@@ -159,8 +160,18 @@ export default function About({ about, shared }: AboutProps) {
                 <h2 className="font-serif text-2xl md:text-3xl font-semibold text-foreground mb-4">
                   {decodeEntities(section.title)}
                 </h2>
-                <div className="font-sans text-muted-foreground leading-[1.8] whitespace-pre-line text-base">
-                  {decodeEntities(section.body)}
+                <div className="font-sans text-muted-foreground leading-[1.8] text-base">
+                  <ReactMarkdown
+                    components={{
+                      // Body paragraphs: keep the visual spacing the old
+                      // whitespace-pre-line version produced. Last paragraph
+                      // drops its bottom margin so the next section sits
+                      // tight against it.
+                      p: ({ children }) => <p className="mb-4 last:mb-0">{children}</p>,
+                    }}
+                  >
+                    {decodeEntities(section.body)}
+                  </ReactMarkdown>
                 </div>
               </motion.div>
 

@@ -22,11 +22,15 @@ export default function TourStop({ stop }) {
               </div>
             )}
           </div>
-          {stop.paintingDescription && (
-            <p className="font-sans text-xs text-muted-foreground mt-3 italic px-1">
-              {decodeEntities(stop.paintingDescription)}
-            </p>
-          )}
+          {/*
+            Caption under the painting removed (Userback #7679797). The
+            paintingDescription ACF field was a near-duplicate of the
+            narrative's first paragraph and rendered truncated in a small
+            box, which read as a layout bug. The full narrative below
+            covers the same content. Keep the ACF field around in case
+            editors later want to write a distinct caption — just don't
+            display it for now.
+          */}
         </div>
 
         <div>

@@ -5,7 +5,7 @@ import { ROUTES } from "@/lib/routes";
 import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_SERMON, GET_SERMON_BY_ID, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
-import { decodeEntities } from "@/lib/utils";
+import { decodeEntities, stripDuplicatedTitle } from "@/lib/utils";
 import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
@@ -131,12 +131,10 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
           )}
         </div>
 
-        {sermon.excerpt && (
-          <div className="mb-6">
-            <div className="font-sans text-muted-foreground leading-relaxed text-base"
-              dangerouslySetInnerHTML={{ __html: sermon.excerpt }} />
-          </div>
-        )}
+        {/* Excerpt removed — the WP auto-excerpt was the first ~55 words
+            of the body (title + scripture + first paragraph), which
+            duplicated content already shown above and below. Userback
+            #7655929. */}
 
         {fields.pdfUrl && (
           <a
@@ -176,7 +174,7 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
         {sermon.content && (
           <div
             className="sermon-content font-charter text-[22px] text-foreground/90 leading-[1.8]"
-            dangerouslySetInnerHTML={{ __html: sermon.content }} />
+            dangerouslySetInnerHTML={{ __html: stripDuplicatedTitle(sermon.content, sermon.title) }} />
         )}
       </motion.div>
       <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />

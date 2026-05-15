@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, BookOpen, Sun, FileText, Scroll } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
-import { decodeEntities } from "@/lib/utils";
+import { decodeEntities, stripHtml } from "@/lib/utils";
 import { format } from "date-fns";
 
 const QUOTES = [
@@ -101,11 +101,17 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
       label: "From the Library",
       sublabel: "Featured Article",
       icon: FileText,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
-      accentColor: "border-blue-200",
+      // Was bg-blue-50 / text-blue-600; the blue clashed visibly with
+      // the cream/amber tones of the other two cards (Userback #7654353).
+      // Matching the warm palette here keeps the trio cohesive.
+      iconBg: "bg-secondary",
+      iconColor: "text-primary",
+      accentColor: "border-secondary",
       title: art.title || "Featured Article",
-      text: art.excerpt,
+      // The S&T-derived excerpt is OCR-extracted scan text and reads as
+      // gibberish ("THE ! I mul flu ®mul; A RECORD OF COMBAT…"), so the
+      // card surfaces just the title + CTA (Userback #7678693).
+      text: null,
       href: article ? ROUTES.SwordAndTrowel : ROUTES.Search + "?type=article",
       cta: "Read the article",
       available: true,
@@ -171,9 +177,15 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
                             {decodeEntities(item.title)}
                           </h3>
                           {item.text && (
-                            <div
-                              className="font-sans text-sm text-muted-foreground leading-relaxed line-clamp-4 flex-1"
-                              dangerouslySetInnerHTML={{ __html: item.text }} />
+                            // Render as plain text — devotional/sermon excerpts
+                            // come from WP as HTML with embedded <br> and
+                            // <p> tags, which interact poorly with line-clamp
+                            // (Userback #7658915: lines visibly overlapping).
+                            // stripHtml flattens to a single string the
+                            // line-clamp can reliably truncate.
+                            <p className="font-sans text-sm text-muted-foreground leading-relaxed line-clamp-4 flex-1">
+                              {stripHtml(item.text)}
+                            </p>
                           )}
                           <div className="mt-5 flex items-center gap-1.5 text-sm font-sans font-medium text-primary group-hover:text-accent transition-colors">
                             {item.cta}

@@ -90,7 +90,7 @@ export default function DigitalTour({ stops, shared }: DigitalTourProps) {
                 The Spurgeon Gallery
               </h1>
               <p className="font-sans text-sm text-primary-foreground/50 mt-2 max-w-lg">
-                Six paintings. Six chapters of a remarkable life. Explore each work online, or scan the QR codes in person at the Spurgeon Library.
+                Nine paintings. Nine chapters of a remarkable life. Explore each work online, or scan the QR codes in person at the Spurgeon Library.
               </p>
             </div>
             <button
@@ -177,7 +177,11 @@ export const getStaticProps: GetStaticProps<DigitalTourProps> = async ({ preview
 
   try {
     const { data } = await apolloClient.query({ query: GET_TOUR_STOPS });
-    stops = ((data as any)?.tourStops?.nodes || []).map(reshapeTourStop);
+    stops = ((data as any)?.tourStops?.nodes || [])
+      .map(reshapeTourStop)
+      // Sort by stop_number so the navigation chips render 01, 02, 03…
+      // regardless of the order WPGraphQL returns them in.
+      .sort((a: Stop, b: Stop) => (a.id || '').localeCompare(b.id || ''));
   } catch (err: any) {
     console.error('[GetTourStops failed]', err?.message);
   }

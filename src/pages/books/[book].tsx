@@ -111,9 +111,15 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
                 className="flex-1 min-w-0 bg-card border border-border rounded-lg px-3 py-2 font-sans text-sm text-foreground outline-none focus:border-primary/40 max-w-md">
                 {sorted.map((c, i) => {
                   const num = c.bookChapterFields?.chapterNumber ?? i + 1;
+                  // Gleanings is a curated set of devotions numbered 26–125
+                  // in the source — surfacing those raw numbers in the
+                  // chapter selector is more confusing than helpful, so
+                  // we drop the number prefix for this book.
+                  const showNumber = bookSlug !== 'gleanings-among-the-sheaves';
+                  const title = decodeEntities(c.title || `Chapter ${num}`);
                   return (
                     <option key={c.databaseId ?? i} value={i}>
-                      {num}. {decodeEntities(c.title || `Chapter ${num}`)}
+                      {showNumber ? `${num}. ${title}` : title}
                     </option>
                   );
                 })}
@@ -137,6 +143,35 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
                 )}
               </article>
             )}
+
+            {/* Duplicate prev/next nav at the bottom so readers don't have
+                to scroll back to the top after finishing a chapter
+                (Userback #7654243). */}
+            <div className="flex items-center justify-between gap-3 mt-12 pt-8 border-t border-border">
+              <button
+                onClick={() => {
+                  setChapterIdx(i => Math.max(0, i - 1));
+                  if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={chapterIdx === 0}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-border font-sans text-sm hover:border-primary/40 disabled:opacity-30 flex-shrink-0">
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+              <span className="font-sans text-sm text-muted-foreground">
+                {chapterIdx + 1} of {sorted.length}
+              </span>
+              <button
+                onClick={() => {
+                  setChapterIdx(i => Math.min(sorted.length - 1, i + 1));
+                  if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                disabled={chapterIdx === sorted.length - 1}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-primary-foreground font-sans text-sm font-medium hover:bg-primary/90 disabled:opacity-30 flex-shrink-0">
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </>
         )}
       </div>

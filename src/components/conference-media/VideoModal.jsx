@@ -3,10 +3,28 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
 /**
- * Modal that loads a YouTube embed when opened. Pure client component — open
- * state is owned by the parent. Closes on backdrop click, X button, or Esc.
+ * Translate a YouTube or Vimeo watch URL into a player-embed URL suitable
+ * for an <iframe src>. Returns null for unsupported / empty inputs.
  */
-export default function VideoModal({ open, onClose, youtubeId, title }) {
+function toEmbedSrc(url) {
+  if (!url) return null;
+  const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`;
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  if (vm) return `https://player.vimeo.com/video/${vm[1]}?autoplay=1`;
+  return null;
+}
+
+/**
+ * Modal that loads a YouTube or Vimeo embed when opened. Pure client
+ * component — open state is owned by the parent. Closes on backdrop
+ * click, X button, or Esc. Pass either a raw `videoUrl` (preferred) or
+ * a `youtubeId` (legacy callers).
+ */
+export default function VideoModal({ open, onClose, videoUrl = null, youtubeId = null, title = "" }) {
+  const embedSrc = videoUrl
+    ? toEmbedSrc(videoUrl)
+    : (youtubeId ? `https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0` : null);
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -51,13 +69,15 @@ export default function VideoModal({ open, onClose, youtubeId, title }) {
               className="absolute -top-12 right-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
-            <iframe
-              src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&rel=0`}
-              title={title || "YouTube video"}
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full rounded-xl shadow-2xl bg-black" />
+            {embedSrc && (
+              <iframe
+                src={embedSrc}
+                title={title || "Video"}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full rounded-xl shadow-2xl bg-black" />
+            )}
           </motion.div>
         </motion.div>
       )}

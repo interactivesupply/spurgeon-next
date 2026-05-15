@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { GetStaticProps } from "next";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import FooterSection from "@/components/home/FooterSection";
 import LibraryCarousel from "@/components/library/LibraryCarousel";
 import LibraryStaff from "@/components/library/LibraryStaff";
+import VideoModal from "@/components/conference-media/VideoModal";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_LIBRARY_PAGE_CONTENT } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
@@ -19,7 +20,7 @@ interface LibraryContent {
     primaryLabel: string; secondaryLabel: string;
   };
   carousel: { src: string; alt: string }[];
-  video: { eyebrow: string; heading: string; intro: string; url: string };
+  video: { eyebrow: string; heading: string; intro: string; url: string; thumb: string | null };
   tour: { eyebrow: string; heading: string; body: string; ctaLabel: string };
   president: { eyebrow: string; heading: string; photo: string | null; quote: string; attribution: string };
   visit: {
@@ -60,6 +61,23 @@ function youtubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
+async function fetchVideoThumb(url: string): Promise<string | null> {
+  if (!url) return null;
+  const yt = youtubeId(url);
+  if (yt) return `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`;
+  if (/vimeo\.com\/\d+/.test(url)) {
+    try {
+      const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`);
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j.thumbnail_url || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 function MultilineText({ text }: { text: string | undefined | null }) {
   if (!text) return null;
   return text.split('\n').map((line, i, arr) => (
@@ -71,7 +89,8 @@ function MultilineText({ text }: { text: string | undefined | null }) {
 }
 
 export default function Library({ library, tourPreview, staff, shared }: LibraryProps) {
-  const ytId = youtubeId(library.video.url);
+  const videoThumb = library.video.thumb;
+  const [videoOpen, setVideoOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,14 +169,14 @@ export default function Library({ library, tourPreview, staff, shared }: Library
               viewport={{ once: true }}
               transition={{ duration: 0.5 }}
               className="rounded-2xl overflow-hidden aspect-video shadow-2xl border border-border">
-              <a
-                href={library.video.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full h-full rounded-2xl overflow-hidden relative group">
-                {ytId && (
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                aria-label={`Play video: ${library.video.heading}`}
+                className="block w-full h-full rounded-2xl overflow-hidden relative group cursor-pointer">
+                {videoThumb && (
                   <img
-                    src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
+                    src={videoThumb}
                     alt={library.video.heading}
                     className="w-full h-full object-cover" />
                 )}
@@ -166,7 +185,7 @@ export default function Library({ library, tourPreview, staff, shared }: Library
                     <PlayCircle className="w-8 h-8 text-foreground" />
                   </div>
                 </div>
-              </a>
+              </button>
             </motion.div>
           </div>
         </div>
@@ -351,6 +370,12 @@ export default function Library({ library, tourPreview, staff, shared }: Library
         )}
       </div>
 
+      <VideoModal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        videoUrl={library.video.url}
+        title={library.video.heading} />
+
       <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
     </div>
   );
@@ -359,7 +384,7 @@ export default function Library({ library, tourPreview, staff, shared }: Library
 const EMPTY_LIBRARY: LibraryContent = {
   hero: { eyebrow: '', titleTop: '', titleBottom: '', body: '', background: null, primaryLabel: '', secondaryLabel: '' },
   carousel: [],
-  video: { eyebrow: '', heading: '', intro: '', url: '' },
+  video: { eyebrow: '', heading: '', intro: '', url: '', thumb: null },
   tour: { eyebrow: '', heading: '', body: '', ctaLabel: '' },
   president: { eyebrow: '', heading: '', photo: null, quote: '', attribution: '' },
   visit: {
@@ -403,6 +428,9 @@ export const getStaticProps: GetStaticProps<LibraryProps> = async () => {
           heading: f.libVideoHeading || '',
           intro: f.libVideoIntro || '',
           url: f.libVideoUrl || '',
+          // Resolved at build time. YouTube uses img.youtube.com; Vimeo
+          // needs an oEmbed round-trip to get the thumbnail URL.
+          thumb: await fetchVideoThumb(f.libVideoUrl || ''),
         },
         tour: {
           eyebrow: f.libTourEyebrow || '',

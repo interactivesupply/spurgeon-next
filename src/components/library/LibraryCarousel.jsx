@@ -18,13 +18,17 @@ export default function LibraryCarousel({ images }) {
   const items = (images?.length ? images : DEFAULT_IMAGES);
   const [current, setCurrent] = useState(0);
 
+  // Auto-advance every 8s. Depending on `current` (as well as items.length)
+  // resets the timer whenever the user navigates manually — without this,
+  // a manual click can be followed by an auto-advance milliseconds later
+  // and the slide reads as "shifting erratically" (Userback #7678657).
   useEffect(() => {
     if (items.length <= 1) return;
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % items.length);
-    }, 5000);
+    }, 8000);
     return () => clearInterval(interval);
-  }, [items.length]);
+  }, [items.length, current]);
 
   const next = () => setCurrent((prev) => (prev + 1) % items.length);
   const prev = () => setCurrent((prev) => (prev - 1 + items.length) % items.length);

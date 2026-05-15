@@ -2,7 +2,6 @@ import type { GetStaticProps } from "next";
 import HeroSection from "@/components/home/HeroSection";
 import StatsSection from "@/components/home/StatsSection";
 import WeeklyPulpit from "@/components/home/WeeklyPulpit";
-import FeaturedSermons from "@/components/home/FeaturedSermons";
 import TimelineSection from "@/components/home/TimelineSection";
 import ResourcesSection from "@/components/home/ResourcesSection";
 import LibraryVisitSection from "@/components/home/LibraryVisitSection";
@@ -45,7 +44,6 @@ export default function Home(props: HomeProps) {
         devotional={flatDevotional}
         latestSermons={props.latestSermons}
         article={props.featuredArticle} />
-      <FeaturedSermons sermons={props.featuredSermons} />
       <TimelineSection
         eyebrow={props.timeline?.eyebrow}
         heading={props.timeline?.heading}

@@ -16,7 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    await mg.messages.create(MAILGUN_DOMAIN, {
+    await mg().messages.create(MAILGUN_DOMAIN, {
       from: NOTIFY_FROM,
       to: [NOTIFY_TO],
       subject: 'New Spurgeon Center subscriber',
