@@ -473,12 +473,17 @@ export const getStaticProps: GetStaticProps<LibraryProps> = async () => {
     }
 
     tourPreview = (d?.tourStops?.nodes || [])
-      .slice(0, 6)
       .map((n: any) => ({
         num: n.tourStopFields?.stopNumber || '',
         title: n.title || '',
       }))
-      .filter((s: any) => s.num && s.title);
+      .filter((s: any) => s.num && s.title)
+      // Sort by stop_number so the preview cards read 01, 02, 03… —
+      // menu_order is the GraphQL sort key but doesn't always match the
+      // editor-set stop number (Userback #7705516-ish). Same pattern as
+      // /library/digital-tour.
+      .sort((a: any, b: any) => a.num.localeCompare(b.num))
+      .slice(0, 6);
 
     staff = (d?.libraryStaffMembers?.nodes || []).map((n: any) => ({
       name: n.title || '',
