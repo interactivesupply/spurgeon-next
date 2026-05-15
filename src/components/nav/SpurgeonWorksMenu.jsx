@@ -17,8 +17,8 @@ const FALLBACK_COLUMNS = [
     description: "3,500+ sermons across two collections",
     links: [
       { label: "All Sermons", to: ROUTES.Search + "?type=sermon" },
-      { label: "New Park Street Pulpit", to: ROUTES.Search + "?type=sermon&collection=new_park_street_pulpit" },
-      { label: "Metropolitan Tabernacle", to: ROUTES.Search + "?type=sermon&collection=metropolitan_tabernacle_pulpit" },
+      { label: "New Park Street Pulpit", to: ROUTES.Search + "?collection=new-park-street-pulpit" },
+      { label: "Metropolitan Tabernacle", to: ROUTES.Search + "?collection=metropolitan-tabernacle-pulpit" },
       { label: "Search by Scripture", to: ROUTES.Search + "?type=sermon" },
       { label: "Browse by Year", to: ROUTES.Search + "?type=sermon" },
     ],

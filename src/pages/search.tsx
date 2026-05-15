@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import type { GetStaticProps } from "next";
 import { ROUTES } from "@/lib/routes";
-import { algolia, ALGOLIA_INDEX, reshapeHit, type ReshapedHit } from "@/lib/algolia";
+import { algolia, ALGOLIA_INDEX, reshapeHit, prettyCollection, type ReshapedHit } from "@/lib/algolia";
 import { Search as SearchIcon, BookOpen, X } from "lucide-react";
 import SearchFilters from "@/components/search/SearchFilters";
 import SearchResultCard from "@/components/search/SearchResultCard";
@@ -258,7 +258,11 @@ export default function SearchPage({ shared }: SearchPageProps) {
         field === "scripture" ? SCRIPTURE_FACET_ATTR : field;
 
       const requests = [
-        // Main: hits + counts for facets that are NOT currently filtering
+        // Main: hits + counts for facets that are NOT currently filtering.
+        // optionalFilters lifts sermons in the ranking — textual relevance
+        // is still the primary sort, but in the "all" tab when several post
+        // types match comparably, sermons float above devotionals/treasury/
+        // blog/etc. (Userback #7666801).
         {
           indexName: ALGOLIA_INDEX,
           query: q,
@@ -266,6 +270,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
           page: 0,
           facets: facetFields.map(facetAttr),
           facetFilters: buildFacetFilters(f, scopedTypes),
+          optionalFilters: ['post_type:spurgeon_sermon'],
         },
         // One per facet — excluded from its own filter so its count list
         // shows all values that would match if you toggled that facet alone.
@@ -304,7 +309,10 @@ export default function SearchPage({ shared }: SearchPageProps) {
             .map(([value, count]) => ({
               value,
               count,
-              label: field === "post_type" ? POST_TYPE_LABELS[value] || value : undefined,
+              label:
+                field === "post_type" ? POST_TYPE_LABELS[value] || value :
+                field === "collection" ? prettyCollection(value) :
+                undefined,
             }))
             .sort((a, b) => b.count - a.count);
         });
@@ -341,6 +349,9 @@ export default function SearchPage({ shared }: SearchPageProps) {
             hitsPerPage: HITS_PER_PAGE,
             page: nextPage,
             facetFilters: buildFacetFilters(filters, scopedTypes),
+            // Keep ranking consistent with the first page — same sermon
+            // boost as the main runSearch request above.
+            optionalFilters: ['post_type:spurgeon_sermon'],
           },
         ],
       });

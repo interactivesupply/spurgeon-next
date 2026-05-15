@@ -40,9 +40,13 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
   const typeOptions = toOptions(facets.post_type);
   const collectionOptions = toOptions(facets.collection);
   const topicOptions = toOptions(facets.topic);
-  // Year facet: present numerically, descending.
+  // Year facet: present numerically, descending. Drop "0" — it's the
+  // ACF default-when-unset and surfaces in the index for posts (mostly
+  // conference media) that don't have a real year.
   const yearOptions = toOptions(
-    [...(facets.year || [])].sort((a, b) => Number(b.value) - Number(a.value))
+    (facets.year || [])
+      .filter((v) => Number(v.value) > 0)
+      .sort((a, b) => Number(b.value) - Number(a.value))
   );
   // Scripture facet: re-sort by canonical Bible book order so Genesis comes
   // before Revelation (Algolia returns by count desc, which feels random).

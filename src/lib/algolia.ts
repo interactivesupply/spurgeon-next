@@ -37,7 +37,10 @@ export interface AlgoliaHit {
   date_preached?: string;
   sermon_number?: string;
   notable_quote?: string;
-  collection?: string;
+  // `collection` is emitted by spurgeon-algolia as either a single slug
+  // (legacy records) or an array of slugs (current: leaf volume slug plus
+  // derived series prefix). Treat both shapes uniformly downstream.
+  collection?: string | string[];
   pdf_url?: string;
   video_url?: string;
   thumbnail_url?: string;
@@ -66,7 +69,7 @@ export interface ReshapedHit {
   year: number | null;
   date_preached: string | null;
   sermon_number: string | null;
-  collection: string | null;
+  collection: string[] | null;
   notable_quote: string | null;
   video_url: string | null;
   thumbnail_url: string | null;
@@ -86,6 +89,22 @@ export interface ReshapedHit {
  * search filters, and any other UI that surfaces the type. Single source
  * of truth so adding/renaming a CPT only needs one edit.
  */
+/**
+ * Render a sermon_collection slug as a human-readable label. Volume slugs
+ * like "metropolitan-tabernacle-pulpit-volume-10" become "Metropolitan
+ * Tabernacle Pulpit Volume 10"; series-prefix slugs collapse to their
+ * series name. Anything in OVERRIDES wins; otherwise it's just title-case
+ * on the hyphen-separated parts (good enough for everything in the
+ * current taxonomy).
+ */
+const COLLECTION_LABEL_OVERRIDES: Record<string, string> = {
+  other: 'Other Works',
+};
+export function prettyCollection(slug: string): string {
+  if (COLLECTION_LABEL_OVERRIDES[slug]) return COLLECTION_LABEL_OVERRIDES[slug];
+  return slug.split('-').map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+}
+
 export const POST_TYPE_LABELS: Record<string, string> = {
   spurgeon_sermon: 'Sermon',
   magazine_article: 'Sword and Trowel',
@@ -166,10 +185,16 @@ export function reshapeHit(hit: AlgoliaHit): ReshapedHit {
     postType: hit.post_type,
     scripture_reference: hit.scripture_reference || null,
     topic: hit.topic || null,
-    year: hit.year != null ? Number(hit.year) : null,
+    // Treat year=0 as "no year" — ACF number fields default to 0 when
+    // unset, and 0 is meaningless for a Spurgeon-era publication date.
+    // Also avoids React rendering the literal "0" when used as a JSX
+    // child in a `&&` short-circuit.
+    year: hit.year != null && Number(hit.year) > 0 ? Number(hit.year) : null,
     date_preached: hit.date_preached || null,
     sermon_number: hit.sermon_number || null,
-    collection: hit.collection || null,
+    collection: Array.isArray(hit.collection)
+      ? hit.collection
+      : (hit.collection ? [hit.collection] : null),
     notable_quote: hit.notable_quote || null,
     video_url: hit.video_url || null,
     thumbnail_url: hit.thumbnail_url || null,
