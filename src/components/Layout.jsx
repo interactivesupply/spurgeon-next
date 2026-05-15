@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { ROUTES } from "@/lib/routes";
 import { Search, Menu, X, ChevronDown, MicVocal, BookMarked, Newspaper, FileText, Video, Scroll, Library } from "lucide-react";
+import SearchAutocomplete from "@/components/SearchAutocomplete";
 import SpurgeonWorksMenu from "@/components/nav/SpurgeonWorksMenu";
 import CenterResourcesMenu from "@/components/nav/CenterResourcesMenu";
 
@@ -174,6 +175,11 @@ export default function Layout({ children, nav }) {
                   <X className="w-5 h-5" />
                 </button>
               </form>
+              <SearchAutocomplete
+                query={searchQuery}
+                inputRef={searchInputRef}
+                onSelect={() => { setSearchOpen(false); setSearchQuery(""); }}
+                onSubmitFallback={() => { setSearchOpen(false); setSearchQuery(""); }} />
             </div>
           )}
         </div>
