@@ -188,10 +188,10 @@ export default function TimelineSection({ eyebrow, heading, milestones }) {
                 <span className="text-[hsl(var(--accent))] text-2xl font-bold block">
                   {milestone.year}
                 </span>
-                <h3 className="font-serif text-sm font-semibold text-foreground mt-1 mb-1 leading-snug">
+                <h3 className="font-serif text-sm font-semibold text-[hsl(var(--card))] mt-1 mb-1 leading-snug">
                   {decodeEntities(milestone.title)}
                 </h3>
-                <p className="font-sans text-muted-foreground leading-relaxed text-xs">
+                <p className="font-sans text-[hsl(var(--card))]/70 leading-relaxed text-xs">
                   {decodeEntities(milestone.description)}
                 </p>
               </div>
