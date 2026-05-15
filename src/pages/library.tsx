@@ -67,10 +67,20 @@ async function fetchVideoThumb(url: string): Promise<string | null> {
   if (yt) return `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`;
   if (/vimeo\.com\/\d+/.test(url)) {
     try {
-      const r = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}`);
+      // Pass `width=1920` so oEmbed returns the largest thumbnail it has
+      // metadata for; then rewrite the size suffix in the returned CDN
+      // URL (which Vimeo encodes as `_NxN` or `_N` just before the query
+      // string) to force a 1920px-wide variant. Vimeo's CDN serves up to
+      // 3840px on demand, so this safely gives us a non-grainy poster
+      // even when the oEmbed default is only 295x166 (Userback #7705445).
+      const r = await fetch(
+        `https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}&width=1920`
+      );
       if (!r.ok) return null;
       const j = await r.json();
-      return j.thumbnail_url || null;
+      const raw: string | null = j.thumbnail_url || null;
+      if (!raw) return null;
+      return raw.replace(/_\d+(x\d+)?(?=\?|$)/, "_1920");
     } catch {
       return null;
     }
