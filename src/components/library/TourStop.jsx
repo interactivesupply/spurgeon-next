@@ -12,7 +12,13 @@ export default function TourStop({ stop }) {
       transition={{ duration: 0.4 }}
       className="max-w-5xl mx-auto px-6 py-12">
       <div className="grid md:grid-cols-2 gap-10 items-start">
-        <div>
+        {/*
+          Sticky on md+ so the painting stays in view while the reader
+          scrolls through a long narrative on the right. top-24 clears
+          the fixed header (h-16/md:h-20). Falls back to non-sticky on
+          mobile, where the painting renders above the text inline.
+        */}
+        <div className="md:sticky md:top-24">
           <div className="rounded-2xl overflow-hidden border border-border shadow-xl aspect-[4/3] bg-muted">
             {stop.image ? (
               <img src={stop.image} alt={stop.title} className="w-full h-full object-cover sepia" />
