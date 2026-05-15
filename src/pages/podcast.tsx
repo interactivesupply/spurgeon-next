@@ -26,7 +26,7 @@ export default function PodcastComingSoon({ shared }: PodcastProps) {
           </div>
           <p className="font-sans text-xs uppercase tracking-[0.3em] text-accent mb-3">Coming Soon</p>
           <h1 className="font-serif text-4xl md:text-5xl font-bold text-foreground mb-4">
-            The Spurgeon Library Podcast
+            The Spurgeon For Today Podcast
           </h1>
           <p className="font-sans text-muted-foreground text-base leading-relaxed mb-10">
             A new conversation on Spurgeon's life and legacy — the first
