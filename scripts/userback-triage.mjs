@@ -107,11 +107,18 @@ async function listItems({ statusName = 'open' } = {}) {
   console.log(`${items.length} item${items.length === 1 ? '' : 's'} in "${statusName}":\n`);
   for (const i of items) {
     const created = new Date(i.created).toISOString().slice(0, 10);
+    const modified = i.modified ? new Date(i.modified).toISOString().slice(0, 10) : null;
+    const hasNewActivity = modified && modified !== created;
     console.log(`#${i.id}  [${i.feedbackType}]  ${i.title || '(no title)'}`);
     if (i.description) console.log(`  ${i.description.replace(/\s+/g, ' ').slice(0, 200)}`);
-    console.log(`  by ${i.name || '(anon)'} <${i.email || '?'}>  ${created}`);
+    console.log(`  by ${i.name || '(anon)'} <${i.email || '?'}>  ${created}${hasNewActivity ? `  (last activity ${modified} — check comments)` : ''}`);
     console.log(`  page: ${i.pageUrl}`);
     if (i.Screenshots?.[0]?.url) console.log(`  shot: ${i.Screenshots[0].url}`);
+    // The list endpoint /feedback/comment is currently broken (filter
+    // params are ignored, returns stale 2023 data), so include the
+    // share URL so a human can read the thread directly. See README
+    // notes on the Userback API quirk.
+    if (i.shareUrl) console.log(`  thread: ${i.shareUrl}`);
     console.log();
   }
 }
@@ -119,6 +126,18 @@ async function listItems({ statusName = 'open' } = {}) {
 async function getItem(id) {
   const i = await api(`/feedback/${id}`);
   console.log(JSON.stringify(i, null, 2));
+  // If the item was modified after creation, there are comments we
+  // can't easily fetch (the Userback /feedback/comment listing endpoint
+  // ignores filter params today). Surface that fact + the share URL so
+  // the operator opens the web UI to read them.
+  const created = i?.created ? new Date(i.created).getTime() : 0;
+  const modified = i?.modified ? new Date(i.modified).getTime() : 0;
+  if (modified > created && i?.shareUrl) {
+    console.log('');
+    console.log('⚠  This item has activity AFTER creation — likely comments.');
+    console.log('   Open in browser to read the thread:');
+    console.log('   ' + i.shareUrl);
+  }
 }
 
 async function postComment(id, body) {
