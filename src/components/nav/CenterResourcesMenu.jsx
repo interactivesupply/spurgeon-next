@@ -26,13 +26,12 @@ const FALLBACK_COLUMNS = [
     icon: Video,
     description: "Lectures, recordings, and sessions from Center events",
     links: [
-      { label: "All Lectures", to: ROUTES.Search + "?type=lecture" },
-      { label: "Theology Lectures", to: ROUTES.Search + "?q=theology&type=lecture" },
-      { label: "Ministry Lectures", to: ROUTES.Search + "?q=ministry&type=lecture" },
-      { label: "All Conference Media", to: ROUTES.Search + "?type=conference_media" },
-      { label: "Annual Conference", to: ROUTES.Search + "?q=conference" },
+      { label: "All Media", to: ROUTES.Search + "?type=conference_media" },
+      { label: "Conferences", to: ROUTES.Search + "?q=conference&type=conference_media" },
+      { label: "Lectures on Biblical Preaching", to: ROUTES.Search + "?q=preaching&type=conference_media" },
+      { label: "Symposiums", to: ROUTES.Search + "?q=symposium" },
     ],
-    cta: { label: "Browse all media", to: ROUTES.Search + "?q=conference" },
+    cta: { label: "Browse all media", to: ROUTES.Search + "?type=conference_media" },
   },
 ];
 
