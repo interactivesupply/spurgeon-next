@@ -10,6 +10,7 @@ import FooterSection from "@/components/home/FooterSection";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { algolia, ALGOLIA_INDEX } from "@/lib/algolia";
 import { apolloClient } from "@/lib/apollo-client";
+import PageHead from "@/components/PageHead";
 
 /**
  * Reshape a magazine_article Algolia hit into the flat shape ArticleGrid
@@ -157,6 +158,19 @@ export default function SwordAndTrowel({ shared, categoryTerms }: SwordAndTrowel
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="The Sword and the Trowel"
+        description="Charles Spurgeon's monthly magazine (1865–1892) — sermons, book reviews, news, and reflections from the Metropolitan Tabernacle and the wider work of the Pastors' College."
+        type="article"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Periodical",
+          name: "The Sword and the Trowel",
+          founder: { "@type": "Person", name: "C. H. Spurgeon" },
+          datePublished: "1865",
+          dateModified: "1892",
+        }}
+      />
       <MagazineHero />
       <div className="max-w-6xl mx-auto px-6 -mt-8 relative z-10 mb-6">
         <div className="rounded-3xl overflow-hidden border border-border shadow-md">

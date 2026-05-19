@@ -9,6 +9,7 @@ import SearchFilters from "@/components/search/SearchFilters";
 import SearchResultCard from "@/components/search/SearchResultCard";
 import FooterSection from "@/components/home/FooterSection";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
+import PageHead from "@/components/PageHead";
 
 // ── Tab → CPT mapping. Single source of truth for what shows in each tab.
 // "Spurgeon's Works" = his own writings; "Library's Resources" = modern
@@ -480,8 +481,17 @@ export default function SearchPage({ shared }: SearchPageProps) {
     );
   };
 
+  // The search results page itself shouldn't be indexed — the underlying
+  // pages it surfaces ARE indexable, but search-result URLs with arbitrary
+  // query parameters create infinite duplicate variants.
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={query ? `Search: ${query}` : "Search"}
+        description="Search Spurgeon's sermons, books, devotionals, articles, and the Sword & Trowel magazine."
+        canonicalPath="/search"
+        robots="noindex,follow"
+      />
       <div className="bg-card border-b border-border">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <Link

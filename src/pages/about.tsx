@@ -11,6 +11,7 @@ import { GET_ABOUT_PAGE_CONTENT } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import PageHead from "@/components/PageHead";
 
 interface AboutSection {
   title: string;
@@ -83,6 +84,21 @@ export default function About({ about, shared }: AboutProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="About Charles Spurgeon"
+        description="Charles Haddon Spurgeon (1834–1892) was the 'Prince of Preachers' — pastor of London's Metropolitan Tabernacle, author of dozens of books, and founder of the Pastors' College, Stockwell Orphanage, and the Sword & Trowel magazine."
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: "Charles Haddon Spurgeon",
+          givenName: "Charles Haddon",
+          familyName: "Spurgeon",
+          birthDate: "1834-06-19",
+          deathDate: "1892-01-31",
+          jobTitle: "Pastor, Author",
+          alternateName: ["The Prince of Preachers", "C. H. Spurgeon"],
+        }}
+      />
       <div className="relative bg-primary overflow-hidden">
         <div className="absolute inset-0 opacity-5"
           style={{

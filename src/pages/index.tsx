@@ -8,6 +8,7 @@ import LibraryVisitSection from "@/components/home/LibraryVisitSection";
 import FooterSection from "@/components/home/FooterSection";
 import ScrollPopup from "@/components/home/ScrollPopup";
 import MBTSBanner from "@/components/home/MBTSBanner";
+import PageHead from "@/components/PageHead";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_HOME_PAGE_CONTENT } from "@/lib/queries";
 
@@ -38,6 +39,19 @@ export default function Home(props: HomeProps) {
 
   return (
     <div className="min-h-screen">
+      <PageHead
+        title="The Spurgeon Library"
+        description="The Spurgeon Library is a resource from Midwestern Seminary, hosting Charles Haddon Spurgeon's sermons, books, magazine, articles, and personal collection — the most comprehensive Spurgeon resource on the web."
+        suppressSiteSuffix
+        type="website"
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "The Spurgeon Library",
+          alternateName: "Spurgeon.org",
+          publisher: { "@type": "Organization", name: "Midwestern Baptist Theological Seminary" },
+        }}
+      />
       <HeroSection content={props.hero} />
       <StatsSection stats={props.stats} />
       <WeeklyPulpit

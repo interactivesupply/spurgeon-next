@@ -7,6 +7,7 @@ import FooterSection from "@/components/home/FooterSection";
 import { apolloClient } from "@/lib/apollo-client";
 import { GET_BOOKS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
+import PageHead from "@/components/PageHead";
 
 interface Book {
   id: string;
@@ -51,6 +52,10 @@ export default function Books({ books: incomingBooks, categoryTerms, shared }: B
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="Books by Charles Spurgeon"
+        description="Read Spurgeon's books online — devotionals, commentary, theology, pastoral works, and more — including Morning and Evening, Faith's Check Book, The Treasury of David, and All of Grace."
+      />
       <BooksHero />
       <BookCategoryTabs active={activeCategory} onChange={setActiveCategory} terms={categoryTerms} />
       <div className="max-w-5xl mx-auto px-6 py-12">

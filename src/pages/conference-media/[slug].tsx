@@ -18,6 +18,7 @@ import { motion } from "framer-motion";
 import { format } from "date-fns";
 import VideoModal from "@/components/conference-media/VideoModal";
 import RelatedConferenceMedia from "@/components/conference-media/RelatedConferenceMedia";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 
 interface ConferenceMediaPageProps {
   item: any | null;
@@ -105,9 +106,33 @@ export default function ConferenceMediaDetailPage({ item, related, shared }: Con
     || (ytId ? `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg` : '');
   const heroAlt = item.featuredImage?.node?.altText || item.title;
   const resources: { label: string; url: string }[] = (fields.relatedResources || []).filter((r: any) => r?.url);
+  const cleanTitle = decodeEntities(item.title || "Conference Media");
+  const speaker = fields.speaker ? decodeEntities(fields.speaker) : "";
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={cleanTitle}
+        description={descriptionFromHtml(item.excerpt || item.content, 155)}
+        image={heroImage || undefined}
+        type="article"
+        article={{
+          publishedTime: item.date,
+          author: speaker || "The Spurgeon Library",
+          section: "Conference Media",
+        }}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": ytId ? "VideoObject" : "Article",
+          name: cleanTitle,
+          headline: cleanTitle,
+          ...(ytId && { embedUrl: `https://www.youtube.com/embed/${ytId}` }),
+          ...(heroImage && { thumbnailUrl: heroImage, image: heroImage }),
+          ...(speaker && { author: { "@type": "Person", name: speaker } }),
+          ...(item.date && { uploadDate: item.date, datePublished: item.date }),
+          publisher: { "@type": "Organization", name: "The Spurgeon Library" },
+        }}
+      />
       <motion.article
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

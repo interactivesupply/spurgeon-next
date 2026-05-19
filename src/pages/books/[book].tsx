@@ -15,6 +15,7 @@ import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { ArrowLeft, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import { decodeEntities } from "@/lib/utils";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 
 interface BookReaderProps {
   bookSlug: string;
@@ -64,9 +65,44 @@ export default function BookReader({ bookSlug, bookTitle, bookSubtitle, chapters
   }
 
   const current = sorted[chapterIdx];
+  const cleanBookTitle = decodeEntities(bookTitle);
+  // For the canonical, drop the ?chapter= param so all chapter views
+  // canonicalize to the book's root page. Otherwise every chapter URL
+  // creates its own canonical, fragmenting link equity.
+  // Use just the book title when no chapter is selected OR the chapter
+  // title is effectively the same as the book name (common for short
+  // works where chapter 1's title repeats the book title).
+  const chapterTitleClean = current?.title ? decodeEntities(current.title) : "";
+  const sameAsBook =
+    chapterTitleClean.toLowerCase().replace(/[^a-z0-9]/g, "") ===
+    cleanBookTitle.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const pageTitle = chapterTitleClean && !sameAsBook
+    ? `${chapterTitleClean} — ${cleanBookTitle}`
+    : cleanBookTitle;
+  const description = current?.content
+    ? descriptionFromHtml(current.content, 155)
+    : (bookSubtitle ? decodeEntities(bookSubtitle) : `${cleanBookTitle} by C. H. Spurgeon, hosted at The Spurgeon Library.`);
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={pageTitle}
+        description={description}
+        canonicalPath={`/books/${bookSlug}`}
+        type="article"
+        article={{
+          author: "C. H. Spurgeon",
+          section: cleanBookTitle,
+        }}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Book",
+          name: cleanBookTitle,
+          author: { "@type": "Person", name: "C. H. Spurgeon" },
+          publisher: { "@type": "Organization", name: "The Spurgeon Library" },
+          numberOfPages: sorted.length,
+        }}
+      />
       <div className="bg-foreground text-primary-foreground">
         <div className="max-w-3xl mx-auto px-6 py-10">
           <Link

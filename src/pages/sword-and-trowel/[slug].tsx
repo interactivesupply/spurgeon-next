@@ -10,6 +10,7 @@ import { ArrowLeft, Newspaper, BookOpen, Calendar, FileText } from "lucide-react
 import FooterSection from "@/components/home/FooterSection";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 
 // Fallback labels in case the taxonomy term has no `name` (shouldn't happen,
 // but keeps the UI sensible if a category was deleted in wp-admin).
@@ -45,9 +46,36 @@ export default function MagazineArticlePage({ article, shared }: ArticlePageProp
   // Category now comes from the magazine_category taxonomy.
   const term = article.magazineCategories?.nodes?.[0];
   const categoryLabel = term?.name || (term?.slug ? CATEGORY_LABEL_FALLBACK[term.slug] : null);
+  const cleanTitle = decodeEntities(article.title || "Article");
+  const author = fields.author ? decodeEntities(fields.author) : "C. H. Spurgeon";
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={cleanTitle}
+        description={descriptionFromHtml(article.excerpt || article.content, 155)}
+        type="article"
+        article={{
+          publishedTime: article.date,
+          author,
+          section: categoryLabel || "The Sword and the Trowel",
+        }}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: cleanTitle,
+          author: { "@type": "Person", name: author },
+          publisher: {
+            "@type": "Organization",
+            name: "The Sword and the Trowel",
+          },
+          isPartOf: {
+            "@type": "PublicationIssue",
+            issueNumber: fields.issue || undefined,
+          },
+          ...(article.date && { datePublished: article.date }),
+        }}
+      />
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

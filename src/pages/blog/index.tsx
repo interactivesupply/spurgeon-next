@@ -10,6 +10,7 @@ import { GET_BLOG_ENTRIES } from "@/lib/queries";
 import { decodeEntities } from "@/lib/utils";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import FooterSection from "@/components/home/FooterSection";
+import PageHead from "@/components/PageHead";
 
 interface BlogProps {
   shared: SharedPageData;
@@ -36,6 +37,10 @@ export default function BlogIndex({ shared }: BlogProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="Blog"
+        description="Reflections, articles, and stories from the Spurgeon Library team — exploring the life, ministry, and ongoing relevance of Charles Haddon Spurgeon."
+      />
       <div className="bg-foreground text-primary-foreground">
         <div className="max-w-6xl mx-auto px-6 py-16">
           <p className="font-sans text-xs tracking-[0.3em] uppercase text-primary-foreground/40 mb-4">From The Spurgeon Library</p>

@@ -12,6 +12,7 @@ import { apolloClient } from "@/lib/apollo-client";
 import { GET_LIBRARY_PAGE_CONTENT } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
+import PageHead from "@/components/PageHead";
 
 interface LibraryContent {
   hero: {
@@ -104,6 +105,17 @@ export default function Library({ library, tourPreview, staff, shared }: Library
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title="Visit the Library at Midwestern Seminary"
+        description="Visit the Spurgeon Library at Midwestern Baptist Theological Seminary — the world's most comprehensive collection of Charles Haddon Spurgeon's personal library, manuscripts, and ministry artifacts."
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Library",
+          name: "The Spurgeon Library at Midwestern Seminary",
+          parentOrganization: { "@type": "Organization", name: "Midwestern Baptist Theological Seminary" },
+          address: { "@type": "PostalAddress", addressLocality: "Kansas City", addressRegion: "MO", addressCountry: "US" },
+        }}
+      />
       <div className="relative bg-foreground text-primary-foreground overflow-hidden">
         {library.hero.background && (
           <div

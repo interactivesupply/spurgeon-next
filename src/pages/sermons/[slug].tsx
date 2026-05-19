@@ -10,6 +10,7 @@ import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react
 import FooterSection from "@/components/home/FooterSection";
 import RelatedSermons from "@/components/sermons/RelatedSermons";
 import { Badge } from "@/components/ui/badge";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 
@@ -60,8 +61,48 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
   const heroAlt = sermon.featuredImage?.node?.altText || sermon.title;
   const ytId = fields.videoUrl?.match(/(?:v=|youtu\.be\/)([^&\s]+)/)?.[1];
 
+  // Build search-result + social-card metadata for the sermon. The
+  // description prefers a curated notable_quote, then the scripture
+  // reference + first sentence of body content as a fallback.
+  const cleanTitle = decodeEntities(sermon.title || "Sermon");
+  const metaParts: string[] = [];
+  if (fields.scriptureReference) metaParts.push(fields.scriptureReference);
+  if (fields.notableQuote) {
+    metaParts.push(`"${decodeEntities(fields.notableQuote)}"`);
+  } else {
+    metaParts.push(descriptionFromHtml(sermon.content, 130));
+  }
+  const metaDescription = metaParts.filter(Boolean).join(" — ").slice(0, 200);
+  const sermonStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: cleanTitle,
+    author: { "@type": "Person", name: "C. H. Spurgeon" },
+    publisher: {
+      "@type": "Organization",
+      name: "The Spurgeon Library",
+      logo: { "@type": "ImageObject", url: "https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png" },
+    },
+    ...(fields.scriptureReference && { about: fields.scriptureReference }),
+    ...(fields.sermonNumber && { identifier: fields.sermonNumber }),
+    ...(heroImage && { image: heroImage }),
+    ...(sermon.date && { datePublished: sermon.date }),
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={cleanTitle}
+        description={metaDescription}
+        image={heroImage || undefined}
+        type="article"
+        article={{
+          publishedTime: sermon.date,
+          author: "C. H. Spurgeon",
+          section: COLLECTION_LABEL[collectionSlug || ""] || "Sermons",
+        }}
+        structuredData={sermonStructuredData}
+      />
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

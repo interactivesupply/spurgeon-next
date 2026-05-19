@@ -10,6 +10,7 @@ import { GET_ARTICLE, GET_ARTICLE_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import FooterSection from "@/components/home/FooterSection";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 
 interface ArticlePageProps {
   entry: any | null;
@@ -33,9 +34,37 @@ export default function ArticlePage({ entry, shared }: ArticlePageProps) {
 
   const fields = entry.spurgeonArticleFields || {};
   const dateLabel = entry.date ? format(new Date(entry.date), "MMMM d, yyyy") : "";
+  const cleanTitle = decodeEntities(entry.title || "Article");
+  const heroImage = entry.featuredImage?.node?.sourceUrl || fields.featuredImageUrl || null;
+  const author = fields.author ? decodeEntities(fields.author) : "The Spurgeon Library";
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={cleanTitle}
+        description={descriptionFromHtml(entry.excerpt || entry.content, 155)}
+        image={heroImage}
+        type="article"
+        article={{
+          publishedTime: entry.date,
+          author,
+          section: "Articles",
+        }}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: cleanTitle,
+          author: { "@type": "Person", name: author },
+          publisher: {
+            "@type": "Organization",
+            name: "The Spurgeon Library",
+            logo: { "@type": "ImageObject", url: "https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png" },
+          },
+          ...(fields.scriptureReference && { about: fields.scriptureReference }),
+          ...(heroImage && { image: heroImage }),
+          ...(entry.date && { datePublished: entry.date }),
+        }}
+      />
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

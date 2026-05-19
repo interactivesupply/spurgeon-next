@@ -10,6 +10,7 @@ import { GET_BLOG_ENTRY, GET_BLOG_ENTRY_BY_ID } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import FooterSection from "@/components/home/FooterSection";
+import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 
 interface BlogPostProps {
   entry: any | null;
@@ -33,9 +34,35 @@ export default function BlogPostPage({ entry, shared }: BlogPostProps) {
 
   const fields = entry.spurgeonBlogFields || {};
   const dateLabel = entry.date ? format(new Date(entry.date), "MMMM d, yyyy") : "";
+  const cleanTitle = decodeEntities(entry.title || "Blog Post");
+  const heroImage = entry.featuredImage?.node?.sourceUrl || fields.featuredImageUrl || null;
 
   return (
     <div className="min-h-screen bg-background">
+      <PageHead
+        title={cleanTitle}
+        description={descriptionFromHtml(entry.excerpt || entry.content, 155)}
+        image={heroImage}
+        type="article"
+        article={{
+          publishedTime: entry.date,
+          author: fields.author || "The Spurgeon Library",
+          section: "Blog",
+        }}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: cleanTitle,
+          author: { "@type": "Person", name: fields.author || "The Spurgeon Library" },
+          publisher: {
+            "@type": "Organization",
+            name: "The Spurgeon Library",
+            logo: { "@type": "ImageObject", url: "https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png" },
+          },
+          ...(heroImage && { image: heroImage }),
+          ...(entry.date && { datePublished: entry.date }),
+        }}
+      />
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
