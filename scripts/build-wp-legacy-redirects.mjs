@@ -168,10 +168,15 @@ const stats = { total: 0, bySrcCategory: {}, byMatchMode: {}, byDestPostType: {}
 
 for (const url of legacyUrls) {
   stats.total++;
-  // Source path: drop scheme + host, keep leading slash, ensure trailing slash
+  // Source path: drop scheme + host, keep leading slash, and STRIP any
+  // trailing slash. Next.js's built-in trailing-slash normalization (a
+  // 308 redirect) fires BEFORE our custom redirects() rules, so a
+  // request for `/foo/` arrives at the rules table as `/foo`. Sources
+  // must therefore be unslashed to match — otherwise every legacy URL
+  // would 308-strip the slash and then 404.
   let urlObj;
   try { urlObj = new URL(url); } catch { continue; }
-  const sourcePath = urlObj.pathname; // e.g. /resource-library/sermons/foo/
+  const sourcePath = urlObj.pathname.replace(/\/+$/, '') || '/';
 
   // Identify the legacy URL "category" segment between /resource-library/ and the slug
   const m = sourcePath.match(/^\/resource-library\/([^/]+)\/([^/]+)\/?$/);
