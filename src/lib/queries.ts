@@ -883,7 +883,7 @@ export const GET_HOME_DATA = gql`
 
 export const GET_ABOUT_PAGE_CONTENT = gql`
   query GetAboutPageContent {
-    page(id: "about", idType: URI) {
+    page(id: "about-content", idType: URI) {
       aboutPageFields {
         aboutHeroEyebrow
         aboutHeroTitleTop
@@ -913,7 +913,7 @@ export const GET_ABOUT_PAGE_CONTENT = gql`
 
 export const GET_LIBRARY_PAGE_CONTENT = gql`
   query GetLibraryPageContent {
-    page(id: "library", idType: URI) {
+    page(id: "library-content", idType: URI) {
       libraryPageFields {
         libHeroEyebrow
         libHeroTitleTop
