@@ -45,14 +45,15 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
   }, [router.isReady, router.query]);
 
   // Fetch the entry whenever month/day/period changes. Skip on the very
-  // first render until the router has parsed any ?month=&day=&period= params,
-  // otherwise we'd query for today's date, then immediately requery when the
-  // URL params arrive — and Apollo's cache-first policy can stick on the
-  // first stale result.
+  // first render until the router has parsed any ?month=&day=&period= params
+  // to avoid querying with the wrong date before URL params hydrate.
+  // cache-and-network: show a cached result immediately if available, but
+  // always issue a network request so newly-added content appears without
+  // requiring a hard reload.
   const { data, loading } = useQuery(GET_DEVOTIONAL_ENTRY, {
     variables: { month, day: String(day), period },
     skip: !router.isReady,
-    fetchPolicy: 'cache-first',
+    fetchPolicy: 'cache-and-network',
   });
   const entry: any = previewEntry || (data as any)?.morningAndEveningEntries?.nodes?.[0];
 
@@ -167,8 +168,7 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
         ) : (
           <div className="bg-card border border-border rounded-2xl p-12 text-center mb-8">
             <Sun className="w-10 h-10 text-muted-foreground/20 mx-auto mb-4" />
-            <p className="font-serif text-lg text-foreground mb-2">No entry yet for {month} {day}</p>
-            <p className="font-sans text-sm text-muted-foreground">This devotional content is being added to the library.</p>
+            <p className="font-serif text-lg text-foreground">No entry for {month} {day}</p>
           </div>
         )}
 
