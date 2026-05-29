@@ -108,6 +108,9 @@ interface FacetData {
   topic: FacetValue[];
   year: FacetValue[];
   scripture: FacetValue[];
+  // Populated only when exactly one book is selected. Values are the full
+  // lvl1 form ("Genesis > Genesis 1"); label is stripped to just "Genesis 1".
+  scriptureChapter: FacetValue[];
 }
 
 // Algolia attribute behind the Scripture facet. The wp-search-with-algolia
@@ -138,6 +141,7 @@ const EMPTY_FACETS: FacetData = {
   topic: [],
   year: [],
   scripture: [],
+  scriptureChapter: [],
 };
 
 // router.query values are string | string[] | undefined; normalize to string[].
@@ -274,6 +278,11 @@ export default function SearchPage({ shared }: SearchPageProps) {
       const facetAttr = (field: keyof FacetData): string =>
         field === "scripture" ? SCRIPTURE_FACET_ATTR : field;
 
+      // When exactly one book is selected, add a chapter facet query so the
+      // chapter dropdown can be populated. NOT disjunctive — we want the book
+      // filter applied so only chapters within that book appear.
+      const wantChapters = f.scriptures.length === 1;
+
       const requests = [
         // Main: hits + counts for facets that are NOT currently filtering.
         // optionalFilters lifts sermons in the ranking — textual relevance
@@ -298,6 +307,16 @@ export default function SearchPage({ shared }: SearchPageProps) {
           facets: [facetAttr(field)],
           facetFilters: buildFacetFilters(f, scopedTypes, field),
         })),
+        // Chapter facet (conditional): all chapters within the selected book,
+        // sorted by the numeric chapter suffix.
+        ...(wantChapters ? [{
+          indexName: ALGOLIA_INDEX,
+          query: q,
+          hitsPerPage: 0,
+          facets: [SCRIPTURE_CHAPTER_FACET_ATTR],
+          facetFilters: buildFacetFilters(f, scopedTypes),
+          maxValuesPerFacet: 200,
+        }] : []),
       ];
 
       try {
@@ -318,7 +337,7 @@ export default function SearchPage({ shared }: SearchPageProps) {
         setTotalHits(main?.nbHits || 0);
 
         // Build the disjunctive facet data from the per-facet results.
-        const next: FacetData = { post_type: [], collection: [], topic: [], year: [], scripture: [] };
+        const next: FacetData = { post_type: [], collection: [], topic: [], year: [], scripture: [], scriptureChapter: [] };
         facetFields.forEach((field, i) => {
           const r: any = results[i + 1];
           const counts = (r?.facets?.[facetAttr(field)] || {}) as Record<string, number>;
@@ -333,6 +352,22 @@ export default function SearchPage({ shared }: SearchPageProps) {
             }))
             .sort((a, b) => b.count - a.count);
         });
+
+        // Chapter facet: parse lvl1 values ("Genesis > Genesis 1") into display
+        // labels ("Genesis 1") and sort numerically by chapter number.
+        if (wantChapters) {
+          const chapterResult: any = results[facetFields.length + 1];
+          const counts = (chapterResult?.facets?.[SCRIPTURE_CHAPTER_FACET_ATTR] || {}) as Record<string, number>;
+          const chapterNum = (s: string) => parseInt(s.match(/(\d+)$/)?.[1] || '0');
+          next.scriptureChapter = Object.entries(counts)
+            .map(([value, count]) => ({
+              value,
+              count,
+              label: value.split(' > ').pop() || value,
+            }))
+            .sort((a, b) => chapterNum(a.label!) - chapterNum(b.label!));
+        }
+
         setFacets(next);
       } catch (err) {
         console.error("[Algolia search failed]", err);

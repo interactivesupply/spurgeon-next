@@ -1,26 +1,39 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { ChevronDown } from "lucide-react";
 import MultiSelect from "./MultiSelect";
 import { bookRank } from "@/lib/bible";
 
 /**
- * All five dropdowns are populated from Algolia disjunctive facets passed in
- * via the `facets` prop. Each entry is { value, count, label? }. The page
- * computes these by issuing N+1 search requests (one main + one per facet
- * with that facet's filter excluded), so a dropdown's value list reflects
- * "what's available given my OTHER selections".
- *
- * Scripture options come from the hierarchical scripture_chapter taxonomy
- * (lvl0 = book name); ordered by Bible book where the value matches a known
- * book, with anything unrecognized appended alphabetically.
+ * Filter bar for the search page. Type/Collection/Topic/Year use MultiSelect
+ * (multi-value). Scripture uses a two-level single-select: choose a book,
+ * then optionally drill down to a specific chapter. Single-book constraint
+ * is intentional — chapter facets are only meaningful within one book.
  */
-
 
 function toOptions(facetValues = []) {
   return facetValues.map((v) => ({
     value: v.value,
     label: `${v.label || v.value} (${v.count})`,
   }));
+}
+
+/** Native <select> styled to match the MultiSelect button. */
+function FacetSelect({ value, onChange, placeholder, options }) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 pl-3 pr-8 rounded-md border border-border bg-card font-sans text-sm text-foreground min-w-[130px] max-w-[220px] outline-none cursor-pointer appearance-none">
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+    </div>
+  );
 }
 
 export default function SearchFilters({ filters, onFilterChange, resultCount, loadedCount, facets = {} }) {
@@ -45,6 +58,13 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
       return a.value.localeCompare(b.value);
     })
   );
+  // Chapter options: already sorted numerically by search.tsx; labels are
+  // the stripped form ("Genesis 1"), values are the full lvl1 form used
+  // to filter Algolia ("Genesis > Genesis 1").
+  const chapterOptions = toOptions(facets.scriptureChapter || []);
+
+  const selectedBook = (filters.scriptures || [])[0] || '';
+  const selectedChapter = (filters.scriptureChapters || [])[0] || '';
 
   return (
     <div className="flex flex-col gap-3 py-4 border-b border-border">
@@ -63,12 +83,27 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
             placeholder="All Collections"
           />
         )}
-        {(scriptureOptions.length > 0 || (filters.scriptures || []).length > 0) && (
-          <MultiSelect
-            options={scriptureOptions}
-            value={filters.scriptures || []}
-            onChange={(val) => onFilterChange({ ...filters, scriptures: val })}
+        {(scriptureOptions.length > 0 || selectedBook) && (
+          <FacetSelect
+            value={selectedBook}
             placeholder="Scripture"
+            options={scriptureOptions}
+            onChange={(val) => onFilterChange({
+              ...filters,
+              scriptures: val ? [val] : [],
+              scriptureChapters: [],   // clear chapter when book changes
+            })}
+          />
+        )}
+        {selectedBook && (chapterOptions.length > 0 || selectedChapter) && (
+          <FacetSelect
+            value={selectedChapter}
+            placeholder="All chapters"
+            options={chapterOptions}
+            onChange={(val) => onFilterChange({
+              ...filters,
+              scriptureChapters: val ? [val] : [],
+            })}
           />
         )}
         {(topicOptions.length > 0 || (filters.topics || []).length > 0) && (
