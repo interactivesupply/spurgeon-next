@@ -120,6 +120,15 @@
     margin-top: 1.5rem;
     margin-bottom: 0.5rem;
   }
+  .sermon-content a {
+    color: hsl(var(--accent));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .sermon-content a:hover {
+    color: hsl(var(--accent) / 0.75);
+  }
+
   /* Trailing "Dec. 31"-style date paragraph in devotional entries
      (Faith's Check Book, Morning & Evening). The date is already shown at
      the top of the reader, so the redundant tail copy is hidden. */
