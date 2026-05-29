@@ -17,12 +17,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!expected) {
     return res.status(500).json({ error: "REVALIDATE_SECRET not configured" });
   }
-  if (req.query.secret !== expected) {
+
+  // Accept secret from query string (GET) or request body (POST).
+  const body = req.body || {};
+  const secret = (req.query.secret as string) || body.secret;
+  const path   = (typeof req.query.path === "string" ? req.query.path : "") || body.path || "";
+
+  if (secret !== expected) {
     return res.status(401).json({ error: "invalid secret" });
   }
-  const path = typeof req.query.path === "string" ? req.query.path : "";
   if (!path || !path.startsWith("/")) {
-    return res.status(400).json({ error: "missing or invalid ?path=…" });
+    return res.status(400).json({ error: "missing or invalid path" });
   }
   try {
     await res.revalidate(path);
