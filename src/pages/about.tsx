@@ -33,6 +33,7 @@ interface AboutContent {
   video: {
     label: string;
     url: string;
+    thumb: string | null;
   };
   sections: AboutSection[];
   captionPortrait: {
@@ -58,6 +59,22 @@ function youtubeId(url: string | undefined): string | null {
   return m ? m[1] : null;
 }
 
+async function fetchVideoThumb(url: string): Promise<string | null> {
+  if (!url) return null;
+  const ytId = youtubeId(url);
+  if (ytId) return `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+  if (/vimeo\.com\/\d+/.test(url)) {
+    try {
+      const res = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(url)}&width=1920`);
+      if (res.ok) {
+        const json = await res.json();
+        return (json.thumbnail_url as string)?.replace(/_\d+x\d+$/, '_1920x1080') || json.thumbnail_url || null;
+      }
+    } catch {}
+  }
+  return null;
+}
+
 function FloatPortrait({ src, caption }: { src: string; caption: string }) {
   return (
     <>
@@ -80,8 +97,6 @@ function FloatPortrait({ src, caption }: { src: string; caption: string }) {
 }
 
 export default function About({ about, shared }: AboutProps) {
-  const ytId = youtubeId(about.video.url);
-
   return (
     <div className="min-h-screen bg-background">
       <PageHead
@@ -148,9 +163,9 @@ export default function About({ about, shared }: AboutProps) {
               target="_blank"
               rel="noopener noreferrer"
               className="block rounded-2xl overflow-hidden aspect-video shadow-2xl border border-primary-foreground/10 relative group">
-              {ytId && (
+              {about.video.thumb && (
                 <img
-                  src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
+                  src={about.video.thumb}
                   alt={about.video.label}
                   className="w-full h-full object-cover" />
               )}
@@ -246,7 +261,7 @@ export default function About({ about, shared }: AboutProps) {
 
 const EMPTY_ABOUT: AboutContent = {
   hero: { eyebrow: '', titleTop: '', titleBottom: '', body: '', portrait: null, portraitCaption: '' },
-  video: { label: '', url: '' },
+  video: { label: '', url: '', thumb: null },
   sections: [],
   captionPortrait: { image: null, caption: '' },
   cta: { heading: '', body: '', label: '', url: '' },
@@ -272,6 +287,7 @@ export const getStaticProps: GetStaticProps<AboutProps> = async () => {
         video: {
           label: f.aboutVideoLabel || '',
           url: f.aboutVideoUrl || '',
+          thumb: await fetchVideoThumb(f.aboutVideoUrl || ''),
         },
         sections: f.aboutSections || [],
         captionPortrait: {
