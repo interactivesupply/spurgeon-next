@@ -142,6 +142,13 @@ export default function Layout({ children, nav }) {
               </button>
 
               <button
+                onClick={() => setSearchOpen(true)}
+                className="md:hidden text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1"
+                aria-label="Search">
+                <Search className="w-5 h-5" />
+              </button>
+
+              <button
                 onClick={() => setMobileOpen((v) => !v)}
                 className="md:hidden text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1"
                 aria-label="Toggle menu">
@@ -195,6 +202,8 @@ export default function Layout({ children, nav }) {
                     id: "sermons", label: "Sermons", icon: MicVocal,
                     links: [
                       { label: "All Sermons", to: ROUTES.Search + "?type=sermon" },
+                      { label: "Browse by Scripture", to: "/sermons/scripture" },
+                      { label: "Browse by Year", to: ROUTES.Search + "?type=sermon" },
                       { label: "New Park Street Pulpit", to: ROUTES.Search + "?collection=new-park-street-pulpit" },
                       { label: "Metropolitan Tabernacle", to: ROUTES.Search + "?collection=metropolitan-tabernacle-pulpit" },
                     ],
