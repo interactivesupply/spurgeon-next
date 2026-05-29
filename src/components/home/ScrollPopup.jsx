@@ -69,7 +69,7 @@ export default function ScrollPopup() {
                     </div>
                     <div>
                       <p className="font-sans text-sm font-medium text-foreground">Schedule a Visit</p>
-                      <p className="font-sans text-xs text-muted-foreground">Tour the Spurgeon Center</p>
+                      <p className="font-sans text-xs text-muted-foreground">Tour the Spurgeon Library</p>
                     </div>
                   </Link>
 
@@ -81,7 +81,7 @@ export default function ScrollPopup() {
                     </div>
                     <div>
                       <p className="font-sans text-sm font-medium text-foreground">Contact Us</p>
-                      <p className="font-sans text-xs text-muted-foreground">Get in touch with the Center</p>
+                      <p className="font-sans text-xs text-muted-foreground">Get in touch with the Library</p>
                     </div>
                   </a>
 
