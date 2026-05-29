@@ -66,13 +66,13 @@ export default function SubscribeModal() {
                 <div className="p-8 text-center">
                   <p className="font-serif text-lg text-foreground mb-2">Thank you!</p>
                   <p className="font-sans text-sm text-muted-foreground">
-                    We'll keep you posted on news from the Spurgeon Center.
+                    We'll keep you posted on news from the Spurgeon Library.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                   <p className="font-sans text-sm text-muted-foreground">
-                    Subscribe to receive news, articles, and updates from the Spurgeon Center.
+                    Subscribe to receive news, articles, and updates from the Spurgeon Library.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <input
