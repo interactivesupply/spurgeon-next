@@ -55,30 +55,38 @@ export default function SearchFilters({ filters, onFilterChange, resultCount, lo
           onChange={(val) => onFilterChange({ ...filters, postTypes: val })}
           placeholder="All Types"
         />
-        <MultiSelect
-          options={collectionOptions}
-          value={filters.collections || []}
-          onChange={(val) => onFilterChange({ ...filters, collections: val })}
-          placeholder="All Collections"
-        />
-        <MultiSelect
-          options={scriptureOptions}
-          value={filters.scriptures || []}
-          onChange={(val) => onFilterChange({ ...filters, scriptures: val })}
-          placeholder="Scripture"
-        />
-        <MultiSelect
-          options={topicOptions}
-          value={filters.topics || []}
-          onChange={(val) => onFilterChange({ ...filters, topics: val })}
-          placeholder="Topic"
-        />
-        <MultiSelect
-          options={yearOptions}
-          value={filters.years || []}
-          onChange={(val) => onFilterChange({ ...filters, years: val })}
-          placeholder="Year"
-        />
+        {(collectionOptions.length > 0 || (filters.collections || []).length > 0) && (
+          <MultiSelect
+            options={collectionOptions}
+            value={filters.collections || []}
+            onChange={(val) => onFilterChange({ ...filters, collections: val })}
+            placeholder="All Collections"
+          />
+        )}
+        {(scriptureOptions.length > 0 || (filters.scriptures || []).length > 0) && (
+          <MultiSelect
+            options={scriptureOptions}
+            value={filters.scriptures || []}
+            onChange={(val) => onFilterChange({ ...filters, scriptures: val })}
+            placeholder="Scripture"
+          />
+        )}
+        {(topicOptions.length > 0 || (filters.topics || []).length > 0) && (
+          <MultiSelect
+            options={topicOptions}
+            value={filters.topics || []}
+            onChange={(val) => onFilterChange({ ...filters, topics: val })}
+            placeholder="Topic"
+          />
+        )}
+        {(yearOptions.length > 0 || (filters.years || []).length > 0) && (
+          <MultiSelect
+            options={yearOptions}
+            value={filters.years || []}
+            onChange={(val) => onFilterChange({ ...filters, years: val })}
+            placeholder="Year"
+          />
+        )}
       </div>
 
       {resultCount !== null && (
