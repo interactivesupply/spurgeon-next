@@ -29,6 +29,7 @@ const TYPE_COLORS = {
 
 export default function SearchResultCard({ sermon }) {
   const isMedia = sermon.postType === "conference_media";
+  const hasImage = ["spurgeon_blog", "spurgeon_article", "conference_media"].includes(sermon.postType);
   const ytId = getYouTubeId(sermon.video_url);
   const thumbnail = sermon.thumbnail_url || (ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : null);
 
@@ -39,21 +40,22 @@ export default function SearchResultCard({ sermon }) {
     >
       <div className="py-6 border-b border-border hover:bg-secondary/30 transition-colors -mx-4 px-4 rounded-lg">
         <div className="flex flex-col md:flex-row md:items-start gap-4">
-          {/* Video thumbnail for conference media */}
-          {isMedia && (
+          {/* Thumbnail: hero image for blog/articles, video thumbnail for media */}
+          {hasImage && thumbnail && (
             <div className="flex-shrink-0 w-full aspect-video md:w-36 md:aspect-auto md:h-24 rounded-lg overflow-hidden bg-muted relative">
-              {thumbnail ? (
-                <>
-                  <img src={thumbnail} alt={sermon.title} className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <PlayCircle className="w-8 h-8 text-white drop-shadow" />
-                  </div>
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <PlayCircle className="w-10 h-10 text-muted-foreground/40" />
+              <img src={thumbnail} alt={sermon.title} className="w-full h-full object-cover" />
+              {isMedia && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <PlayCircle className="w-8 h-8 text-white drop-shadow" />
                 </div>
               )}
+            </div>
+          )}
+          {isMedia && !thumbnail && (
+            <div className="flex-shrink-0 w-full aspect-video md:w-36 md:aspect-auto md:h-24 rounded-lg overflow-hidden bg-muted relative">
+              <div className="w-full h-full flex items-center justify-center">
+                <PlayCircle className="w-10 h-10 text-muted-foreground/40" />
+              </div>
             </div>
           )}
           <div className="flex-1 min-w-0">

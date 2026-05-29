@@ -44,6 +44,7 @@ export interface AlgoliaHit {
   pdf_url?: string;
   video_url?: string;
   thumbnail_url?: string;
+  featured_image_url?: string;
   author?: string;
   issue?: string;
   category?: string;
@@ -197,7 +198,7 @@ export function reshapeHit(hit: AlgoliaHit): ReshapedHit {
       : (hit.collection ? [hit.collection] : null),
     notable_quote: hit.notable_quote || null,
     video_url: hit.video_url || null,
-    thumbnail_url: hit.thumbnail_url || null,
+    thumbnail_url: hit.thumbnail_url || hit.featured_image_url || null,
     chapter_number: hit.chapter_number != null ? Number(hit.chapter_number) : null,
     month: hit.month || null,
     day: hit.day != null ? Number(hit.day) : null,
