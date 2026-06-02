@@ -13,6 +13,9 @@
 /.next/
 /out/
 
+# opennextjs-cloudflare build output
+/.open-next/
+
 # production
 /build
 
@@ -42,3 +45,5 @@ next-env.d.ts
 # Per-machine state for the Userback → Slack triage cron. Tracks which Open
 # feedback IDs we've already alerted on so we don't re-notify on every fire.
 .userback-triage-state.json
+
+
