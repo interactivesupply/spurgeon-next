@@ -77,3 +77,5 @@ const nextConfig = {
 // secret, sets the Next.js preview cookie, and redirects to the correct
 // per-CPT page (e.g. /blog/<slug>, /sermons/<slug>).
 module.exports = withFaust(nextConfig, { previewDestination: '/api/preview' });
+
+import('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());
