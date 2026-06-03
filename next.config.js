@@ -35,6 +35,15 @@ const nextConfig = {
       { protocol: 'https', hostname: 'spurgeon.wpengine.com' },
     ],
   },
+  async rewrites() {
+    return [
+      { source: '/robots.txt',         destination: '/api/robots' },
+      { source: '/sitemap.xml',        destination: '/api/sitemap?file=sitemap_index.xml' },
+      { source: '/sitemap_index.xml',  destination: '/api/sitemap?file=sitemap_index.xml' },
+      // Individual Yoast sitemap files: /type-sitemap.xml and /type-sitemap2.xml etc.
+      { source: '/:name-sitemap:n(\\d*).xml', destination: '/api/sitemap?file=:name-sitemap:n.xml' },
+    ];
+  },
   async redirects() {
     const legacyPageRedirects = ENABLE_LEGACY_REDIRECTS ? [
       { source: '/Home',              destination: '/',                          permanent: true },
