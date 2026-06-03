@@ -80,13 +80,13 @@ export default function SubscribeModal() {
                       placeholder="First name"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="px-3 py-2 border border-border rounded-md font-sans text-sm bg-background focus:outline-none focus:border-primary" />
+                      className="px-3 py-2 border border-border rounded-md font-sans text-sm bg-background text-foreground focus:outline-none focus:border-primary" />
                     <input
                       type="text"
                       placeholder="Last name"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="px-3 py-2 border border-border rounded-md font-sans text-sm bg-background focus:outline-none focus:border-primary" />
+                      className="px-3 py-2 border border-border rounded-md font-sans text-sm bg-background text-foreground focus:outline-none focus:border-primary" />
                   </div>
                   <input
                     type="email"
@@ -94,7 +94,7 @@ export default function SubscribeModal() {
                     placeholder="Email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md font-sans text-sm bg-background focus:outline-none focus:border-primary" />
+                    className="w-full px-3 py-2 border border-border rounded-md font-sans text-sm bg-background text-foreground focus:outline-none focus:border-primary" />
                   <button
                     type="submit"
                     disabled={status === "loading"}
