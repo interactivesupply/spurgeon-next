@@ -3,15 +3,18 @@ import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 const wpUrl = process.env.NEXT_PUBLIC_WORDPRESS_URL || '';
 const isServer = typeof window === 'undefined';
 
+// Server hits WP directly; browser routes through the Next.js proxy so
+// cross-origin requests aren't blocked (WP Engine doesn't send CORS headers).
+const graphqlUri = isServer ? `${wpUrl}/graphql` : '/api/graphql';
+
 /**
  * Default Apollo client for unauthenticated GraphQL queries — used for
- * everything the public site renders. Browser and server both hit
- * WordPress directly. SSR/SSG paths use no-cache so getStaticProps + ISR
- * are the cache layer; the browser uses cache-first for fast in-session
- * navigation.
+ * everything the public site renders. SSR/SSG paths use no-cache so
+ * getStaticProps + ISR are the cache layer; the browser uses cache-first
+ * for fast in-session navigation.
  */
 export const apolloClient = new ApolloClient({
-  link: createHttpLink({ uri: `${wpUrl}/graphql` }),
+  link: createHttpLink({ uri: graphqlUri }),
   cache: new InMemoryCache(),
   defaultOptions: {
     query: { fetchPolicy: isServer ? 'no-cache' : 'cache-first' },
