@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { mg, MAILGUN_DOMAIN, NOTIFY_TO, NOTIFY_FROM } from '@/lib/mailgun';
+
+const MC_BASE = 'https://mbts.us2.list-manage.com/subscribe/post';
+const MC_U = '4bfccf87f1ae2e87932e5c764';
+const MC_ID = '27339a547a';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -11,19 +14,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Email is required' });
   }
 
-  if (!MAILGUN_DOMAIN || !process.env.MAILGUN_API_KEY) {
-    return res.status(503).json({ error: 'Mailgun not configured' });
-  }
+  const body = new URLSearchParams({
+    u: MC_U,
+    id: MC_ID,
+    EMAIL: email.trim(),
+    FNAME: (firstName || '').trim(),
+    LNAME: (lastName || '').trim(),
+  });
 
   try {
-    await mg().messages.create(MAILGUN_DOMAIN, {
-      from: NOTIFY_FROM,
-      to: [NOTIFY_TO],
-      subject: 'New Spurgeon Center subscriber',
-      text: `New subscriber:\n\nName: ${firstName || ''} ${lastName || ''}\nEmail: ${email}\n`,
+    const mcRes = await fetch(`${MC_BASE}?u=${MC_U}&id=${MC_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
     });
-    return res.status(200).json({ success: true });
+    if (mcRes.ok) return res.status(200).json({ success: true });
+    return res.status(502).json({ error: 'Mailchimp request failed' });
   } catch (err: any) {
-    return res.status(500).json({ error: err?.message || 'Send failed' });
+    return res.status(500).json({ error: err?.message || 'Subscribe failed' });
   }
 }
