@@ -172,9 +172,7 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
           </div>
         )}
 
-        <DevotionalSubscribeBox
-          devotional="morning_and_evening"
-          periods={["morning", "evening", "both"]} />
+        <DevotionalSubscribeBox devotional="morning_and_evening" periods={["morning"]} />
       </div>
 
       <FooterSection settings={shared?.footer} footerColumns={shared?.nav?.footerColumns} />
