@@ -35,7 +35,13 @@ async function refreshCache() {
       { cache: 'no-store' }
     );
     if (res.ok) {
-      global.__redirectRules  = await res.json();
+      const raw = await res.json();
+      // WordPress returns numeric columns as strings; coerce to numbers.
+      global.__redirectRules = raw.map((r: any) => ({
+        ...r,
+        action_code: Number(r.action_code) || 301,
+        regex:       Number(r.regex),
+      }));
       global.__redirectExpiry = Date.now() + CACHE_TTL_MS;
     }
   } catch {
