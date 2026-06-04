@@ -87,6 +87,26 @@ function findMatch(rules: RedirectRule[], pathname: string): MatchResult | null 
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // Transparently proxy WordPress uploads so files served from the WP backend
+  // remain under the public domain without exposing the backend URL.
+  if (pathname.startsWith('/wp-content/')) {
+    const upstream = `${process.env.NEXT_PUBLIC_WORDPRESS_URL}${pathname}`;
+    const asset = await fetch(upstream);
+    if (asset.ok) {
+      return new NextResponse(asset.body, {
+        status: 200,
+        headers: {
+          'Content-Type':  asset.headers.get('Content-Type')  || 'application/octet-stream',
+          'Cache-Control': asset.headers.get('Cache-Control') || 'public, max-age=31536000, immutable',
+          'Content-Length': asset.headers.get('Content-Length') || '',
+        },
+      });
+    }
+    // Asset not found on WP — fall through to Next.js 404.
+    return NextResponse.next();
+  }
+
   const rules = await getRedirects();
   const match = findMatch(rules, pathname);
   if (!match) return NextResponse.next();
