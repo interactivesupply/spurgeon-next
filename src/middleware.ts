@@ -30,8 +30,9 @@ async function refreshCache() {
   if (global.__redirectRefreshing) return;
   global.__redirectRefreshing = true;
   try {
+    // Timestamp param busts WP Engine's CDN cache so we always get fresh rules.
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/spurgeon/v1/redirects`,
+      `${process.env.NEXT_PUBLIC_WORDPRESS_URL}/wp-json/spurgeon/v1/redirects?_=${Date.now()}`,
       { cache: 'no-store' }
     );
     if (res.ok) {
