@@ -68,16 +68,19 @@ interface MatchResult {
 
 function findMatch(rules: RedirectRule[], pathname: string): MatchResult | null {
   for (const rule of rules) {
-    const src  = ('/' + rule.url.replace(/^\//, '')).replace(/\/$/, '') || '/';
     const path = pathname.replace(/\/$/, '') || '/';
 
     if (rule.regex) {
       try {
-        // Strip any anchors the editor may have typed before we wrap them.
-        const pattern = src.replace(/^\^/, '').replace(/\$$/, '');
+        // Strip ^ / $ anchors the editor may have added, then normalize the
+        // pattern to always start with / before we wrap it in our own anchors.
+        let pattern = rule.url
+          .replace(/^\^/, '')
+          .replace(/\$$/, '')
+          .replace(/\/$/, '') || '/';
+        if (!pattern.startsWith('/')) pattern = '/' + pattern;
         const match = new RegExp(`^${pattern}$`).exec(path);
         if (match) {
-          // Substitute $1, $2 … capture group references in the destination.
           const dest = rule.action_data.replace(
             /\$(\d+)/g,
             (_, n) => match[parseInt(n)] ?? ''
@@ -86,6 +89,7 @@ function findMatch(rules: RedirectRule[], pathname: string): MatchResult | null 
         }
       } catch { /* bad regex — skip */ }
     } else {
+      const src = ('/' + rule.url.replace(/^\//, '')).replace(/\/$/, '') || '/';
       if (src === path) return { dest: rule.action_data, code: rule.action_code || 301 };
     }
   }
