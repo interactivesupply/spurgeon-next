@@ -87,15 +87,6 @@ function findMatch(rules: RedirectRule[], pathname: string): MatchResult | null 
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const host = req.headers.get('host') || '';
-
-  // Canonical domain: redirect bare domain to www.
-  if (host === 'spurgeon.org') {
-    return NextResponse.redirect(
-      `https://www.spurgeon.org${pathname}${req.nextUrl.search}`,
-      { status: 301 }
-    );
-  }
 
   // Transparently proxy WordPress uploads so files served from the WP backend
   // remain under the public domain without exposing the backend URL.
