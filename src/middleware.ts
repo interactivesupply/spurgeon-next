@@ -54,14 +54,32 @@ async function getRedirects(): Promise<RedirectRule[]> {
   return global.__redirectRules;
 }
 
-function findMatch(rules: RedirectRule[], pathname: string): RedirectRule | null {
+interface MatchResult {
+  dest: string;
+  code: number;
+}
+
+function findMatch(rules: RedirectRule[], pathname: string): MatchResult | null {
   for (const rule of rules) {
     const src  = ('/' + rule.url.replace(/^\//, '')).replace(/\/$/, '') || '/';
     const path = pathname.replace(/\/$/, '') || '/';
+
     if (rule.regex) {
-      try { if (new RegExp(`^${src}$`).test(path)) return rule; } catch { /* bad regex */ }
+      try {
+        // Strip any anchors the editor may have typed before we wrap them.
+        const pattern = src.replace(/^\^/, '').replace(/\$$/, '');
+        const match = new RegExp(`^${pattern}$`).exec(path);
+        if (match) {
+          // Substitute $1, $2 … capture group references in the destination.
+          const dest = rule.action_data.replace(
+            /\$(\d+)/g,
+            (_, n) => match[parseInt(n)] ?? ''
+          );
+          return { dest, code: rule.action_code || 301 };
+        }
+      } catch { /* bad regex — skip */ }
     } else {
-      if (src === path) return rule;
+      if (src === path) return { dest: rule.action_data, code: rule.action_code || 301 };
     }
   }
   return null;
@@ -73,11 +91,11 @@ export async function middleware(req: NextRequest) {
   const match = findMatch(rules, pathname);
   if (!match) return NextResponse.next();
 
-  const dest = match.action_data.startsWith('http')
-    ? match.action_data
-    : new URL(match.action_data, req.url).toString();
+  const dest = match.dest.startsWith('http')
+    ? match.dest
+    : new URL(match.dest, req.url).toString();
 
-  return NextResponse.redirect(dest, { status: match.action_code || 301 });
+  return NextResponse.redirect(dest, { status: match.code });
 }
 
 export const config = {
