@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronUp, CalendarDays, Mail, Bell } from "lucide-react";
 import Link from "next/link";
 import { ROUTES } from "@/lib/routes";
+import { SubscribeModalDialog } from "@/components/home/SubscribeModal";
 
 export default function ScrollPopup() {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
@@ -24,6 +26,8 @@ export default function ScrollPopup() {
   if (dismissed) return null;
 
   return (
+    <>
+    <SubscribeModalDialog open={subscribeOpen} onClose={() => setSubscribeOpen(false)} />
     <AnimatePresence>
       {visible && (
         <motion.div
@@ -85,17 +89,18 @@ export default function ScrollPopup() {
                     </div>
                   </a>
 
-                  <Link
-                    href={ROUTES.MorningAndEvening + "#subscribe"}
-                    className="flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5 hover:border-primary/40 hover:bg-primary/10 transition-all group">
+                  <button
+                    type="button"
+                    onClick={() => setSubscribeOpen(true)}
+                    className="w-full flex items-center gap-3 p-3 rounded-lg border border-primary/20 bg-primary/5 hover:border-primary/40 hover:bg-primary/10 transition-all group">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Bell className="w-4 h-4 text-primary" />
                     </div>
-                    <div>
+                    <div className="text-left">
                       <p className="font-sans text-sm font-medium text-foreground">Subscribe to Updates</p>
                       <p className="font-sans text-xs text-muted-foreground">Daily devotionals & news</p>
                     </div>
-                  </Link>
+                  </button>
                 </div>
               </motion.div>
             )}
@@ -103,5 +108,6 @@ export default function ScrollPopup() {
         </motion.div>
       )}
     </AnimatePresence>
+    </>
   );
 }

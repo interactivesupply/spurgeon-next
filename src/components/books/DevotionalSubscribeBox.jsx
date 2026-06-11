@@ -28,8 +28,8 @@ export default function DevotionalSubscribeBox({ devotional, periods = ["morning
       <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-xl px-5 py-4">
         <Check className="w-5 h-5 text-primary shrink-0" />
         <div>
-          <p className="font-sans text-sm font-medium text-foreground">You're subscribed!</p>
-          <p className="font-sans text-xs text-muted-foreground">Check your inbox for a confirmation.</p>
+          <p className="font-sans text-sm font-medium text-foreground">You're on the list!</p>
+          <p className="font-sans text-xs text-muted-foreground">Daily emails begin July 1st. Watch for a confirmation email.</p>
         </div>
       </div>
     );
@@ -39,10 +39,10 @@ export default function DevotionalSubscribeBox({ devotional, periods = ["morning
     <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-1">
         <Bell className="w-4 h-4 text-accent" />
-        <span className="font-sans text-sm font-semibold text-foreground">Subscribe for daily delivery</span>
+        <span className="font-sans text-sm font-semibold text-foreground">Pre-register for daily delivery</span>
       </div>
       <p className="font-sans text-xs text-muted-foreground mb-4">
-        Receive today's entry in your inbox each day.
+        Daily emails begin July 1st — sign up now to be ready on day one.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
         {periods.length > 1 && (
