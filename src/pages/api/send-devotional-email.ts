@@ -87,6 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const devotional = req.body?.devotional as DevotionalType;
   const period = (req.body?.period as Period) ?? 'morning';
+  const testEmail = typeof req.body?.testEmail === 'string' ? req.body.testEmail : undefined;
 
   if (!devotional || !TAGS[devotional]) {
     return res.status(400).json({ error: 'devotional must be morning_and_evening or faiths_check_book' });
@@ -132,9 +133,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const html = buildEmailHtml({ title, scripture, content, date: dateLabel, devotionalName });
 
-    await sendDevotionalCampaign({ subject, html, tag: TAGS[devotional] });
+    await sendDevotionalCampaign({ subject, html, tag: TAGS[devotional], testEmail });
 
-    return res.status(200).json({ success: true, subject, date: dateLabel });
+    return res.status(200).json({ success: true, subject, date: dateLabel, test: !!testEmail });
   } catch (err: any) {
     console.error('[send-devotional-email]', err);
     return res.status(500).json({ error: err.message || 'Internal error' });
