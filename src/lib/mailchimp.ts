@@ -25,22 +25,40 @@ export async function subscribeToList({ email, firstName, lastName, tag }: Subsc
     'Content-Type': 'application/json',
   };
 
-  const memberRes = await fetch(`${base}/lists/${LIST_ID}/members/${hash}`, {
+  const mergeFields = {
+    ...(firstName?.trim() && { FNAME: firstName.trim() }),
+    ...(lastName?.trim()  && { LNAME: lastName.trim() }),
+  };
+
+  let memberRes = await fetch(`${base}/lists/${LIST_ID}/members/${hash}`, {
     method: 'PUT',
     headers,
     body: JSON.stringify({
       email_address: email.trim().toLowerCase(),
       status_if_new: 'pending',
-      merge_fields: {
-        FNAME: (firstName || '').trim(),
-        LNAME: (lastName || '').trim(),
-      },
+      merge_fields: mergeFields,
     }),
   });
 
+  // Existing members can have stale invalid values in dropdown fields (e.g.
+  // STATE="OK") from old MBTS data imports. Mailchimp validates all dropdown
+  // fields on every write, so those records block any PUT/PATCH. Clear STATE
+  // and retry as a PATCH — which skips status_if_new (member already exists).
   if (!memberRes.ok) {
-    const err: any = await memberRes.json().catch(() => ({}));
-    throw new Error(err?.detail || 'Mailchimp subscribe failed');
+    const errBody: any = await memberRes.json().catch(() => ({}));
+    if (errBody?.detail?.toLowerCase().includes('merge fields')) {
+      memberRes = await fetch(`${base}/lists/${LIST_ID}/members/${hash}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          merge_fields: { ...mergeFields, STATE: '' },
+        }),
+      });
+    }
+    if (!memberRes.ok) {
+      const err: any = await memberRes.json().catch(() => ({}));
+      throw new Error(err?.detail || errBody?.detail || 'Mailchimp subscribe failed');
+    }
   }
 
   await fetch(`${base}/lists/${LIST_ID}/members/${hash}/tags`, {
