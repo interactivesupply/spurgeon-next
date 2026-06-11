@@ -316,7 +316,7 @@ export default function Library({ library, tourPreview, staff, shared }: Library
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center mb-4">
               <Clock className="w-5 h-5 text-accent" />
             </div>
-            <h3 className="font-serif text-lg font-semibold text-foreground mb-3">Hours</h3>
+            <h3 className="font-serif text-lg font-semibold text-foreground mb-3">Tours</h3>
             <ul className="font-sans text-sm text-muted-foreground space-y-2">
               {library.visit.hours.map((row, i) => (
                 <li key={i} className="flex justify-between">
