@@ -39,10 +39,10 @@ export default function DevotionalSubscribeBox({ devotional, periods = ["morning
     <div className="bg-accent/5 border border-accent/20 rounded-2xl p-6">
       <div className="flex items-center gap-2 mb-1">
         <Bell className="w-4 h-4 text-accent" />
-        <span className="font-sans text-sm font-semibold text-foreground">Pre-register for daily delivery</span>
+        <span className="font-sans text-sm font-semibold text-foreground">Daily delivery coming soon!</span>
       </div>
       <p className="font-sans text-xs text-muted-foreground mb-4">
-        Daily emails begin July 1st — sign up now to be ready on day one.
+        Receive each day's entry in your inbox every morning.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
         {periods.length > 1 && (
