@@ -16,7 +16,7 @@ const DEFAULTS = {
     { icon: "PenTool", title: "Articles & Blog", description: "Commentary, introductions, and essays exploring Spurgeon's thought and theology.", count: "200+", searchTerm: "article" },
     { icon: "BookOpen", title: "Books", description: "Spurgeon's own writings and select volumes from his personal library of 12,000 books.", count: "135+", url: ROUTES.Books },
     { icon: "GraduationCap", title: "Lectures", description: "Lectures from the Spurgeon Library Conference and academic presentations.", count: "50+", searchTerm: "lecture" },
-    { icon: "Library", title: "The Spurgeon Library", description: "The premier center of Spurgeon scholarship, housing nearly 6,000 volumes from his personal library.", count: "6,000 vols", searchTerm: "" },
+    { icon: "Library", title: "The Spurgeon Library", description: "The premier center of Spurgeon scholarship, housing nearly 6,000 volumes from his personal library.", count: "6,000 vols", url: ROUTES.Library },
     { icon: "Users", title: "Conference", description: "An annual academic conference engaging Spurgeon scholarship for pastors and church leaders.", count: "Annual", searchTerm: "" },
   ],
 };
@@ -50,7 +50,8 @@ export default function ResourcesSection({ eyebrow, heading, intro, items }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {resources.map((resource, index) => {
             const Icon = ICONS[resource.icon] || Scroll;
-            const href = resource.url || (resource.searchTerm ? ROUTES.Search + `?type=${resource.searchTerm}` : "#");
+            const defaultItem = DEFAULTS.items.find(d => d.title === resource.title);
+            const href = resource.url || (resource.searchTerm ? ROUTES.Search + `?type=${resource.searchTerm}` : defaultItem?.url || "#");
             return (
               <motion.div
                 key={`${resource.title}-${index}`}

@@ -156,9 +156,6 @@ export default function MorningAndEvening({ shared, previewEntry }: PageProps) {
                 {entry.morningAndEveningFields.scripture}
               </p>
             )}
-            {entry.title && (
-              <h2 className="font-serif text-xl font-bold text-foreground mb-4">{decodeEntities(entry.title)}</h2>
-            )}
             {entry.content && (
               <div
                 className="sermon-content font-charter text-[22px] text-foreground/80 leading-loose"

@@ -66,6 +66,8 @@ const nextConfig = {
 
     return [
       ...legacyPageRedirects,
+      // /spurgeon-center was the old slug for the library page
+      { source: '/spurgeon-center', destination: '/library', permanent: true },
       // Always redirect old sermon detail UUID-based URLs through the API lookup
       {
         source: '/SermonDetail',

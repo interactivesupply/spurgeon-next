@@ -10,8 +10,12 @@ function toEmbedSrc(url) {
   if (!url) return null;
   const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
   if (yt) return `https://www.youtube.com/embed/${yt[1]}?autoplay=1&rel=0`;
-  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
-  if (vm) return `https://player.vimeo.com/video/${vm[1]}?autoplay=1`;
+  // Capture optional private hash (e.g. vimeo.com/123456789/abc123def456)
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)(?:\/([a-f0-9]+))?/);
+  if (vm) {
+    const hashParam = vm[2] ? `&h=${vm[2]}` : '';
+    return `https://player.vimeo.com/video/${vm[1]}?autoplay=1${hashParam}`;
+  }
   return null;
 }
 

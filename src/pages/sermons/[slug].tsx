@@ -6,13 +6,13 @@ import { apolloClient, apolloPreviewClient } from "@/lib/apollo-client";
 import { GET_SERMON, GET_SERMON_BY_ID, GET_ALL_SERMON_SLUGS } from "@/lib/queries";
 import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities, stripDuplicatedTitle } from "@/lib/utils";
-import { ArrowLeft, BookOpen, Calendar, Tag, Hash, FileText } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, Tag, FileText } from "lucide-react";
 import FooterSection from "@/components/home/FooterSection";
 import RelatedSermons from "@/components/sermons/RelatedSermons";
 import { Badge } from "@/components/ui/badge";
 import PageHead, { descriptionFromHtml } from "@/components/PageHead";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 
 const COLLECTION_LABEL: Record<string, string> = {
   new_park_street_pulpit: "The New Park Street Pulpit",
@@ -54,6 +54,7 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
 
   const fields = sermon.sermonFields || {};
   const collectionSlug = sermon.sermonCollections?.nodes?.[0]?.slug;
+  const collectionName = sermon.sermonCollections?.nodes?.[0]?.name;
   // Prefer the WP featured image; fall back to the legacy ACF thumbnail_url
   // (set by the spurgeon.org importer). If neither is set, the hero card
   // is hidden — better than a hardcoded placeholder on every untouched post.
@@ -117,20 +118,19 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
 
         <div className="flex items-start gap-6 mb-4">
           <div className="flex-1">
-            <div className="flex items-center gap-3 flex-wrap mb-4">
+            <div className="flex items-center gap-2 flex-wrap mb-4">
               <Badge variant="default" className="font-sans text-[10px] uppercase tracking-wider bg-primary/10 text-primary">
                 Sermon
               </Badge>
               {collectionSlug && (
-                <span className="font-sans text-xs text-muted-foreground">
-                  {COLLECTION_LABEL[collectionSlug] || collectionSlug}
-                </span>
+                <Badge variant="secondary" className="font-sans text-[10px] tracking-wide">
+                  {collectionName || COLLECTION_LABEL[collectionSlug] || collectionSlug}
+                </Badge>
               )}
               {fields.sermonNumber && (
-                <span className="font-sans text-xs text-muted-foreground flex items-center gap-1">
-                  <Hash className="w-3 h-3" />
-                  {fields.sermonNumber}
-                </span>
+                <Badge variant="secondary" className="font-sans text-[10px] tracking-wide">
+                  No. {fields.sermonNumber}
+                </Badge>
               )}
             </div>
 
@@ -156,7 +156,7 @@ export default function SermonDetailPage({ sermon, shared }: SermonPageProps) {
           {fields.datePreached && (
             <span className="flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5" />
-              {format(new Date(fields.datePreached), "MMMM d, yyyy")}
+              {format(parseISO(fields.datePreached.substring(0, 10)), "MMMM d, yyyy")}
             </span>
           )}
           {fields.year && !fields.datePreached && (

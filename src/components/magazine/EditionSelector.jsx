@@ -34,8 +34,8 @@ export default function EditionSelector({ activeEdition, onEditionChange }) {
   }, [currentIndex]);
 
   const go = (dir) => {
-    const next = currentIndex + dir;
-    if (next >= 0 && next < editions.length) onEditionChange(editions[next]);
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollBy({ left: dir * 240, behavior: "smooth" });
   };
 
   return (
@@ -61,8 +61,7 @@ export default function EditionSelector({ activeEdition, onEditionChange }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => go(-1)}
-            disabled={currentIndex <= 0}
-            className="p-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+            className="p-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all flex-shrink-0"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -96,8 +95,7 @@ export default function EditionSelector({ activeEdition, onEditionChange }) {
           </div>
           <button
             onClick={() => go(1)}
-            disabled={currentIndex >= editions.length - 1}
-            className="p-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+            className="p-1.5 rounded-full border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all flex-shrink-0"
           >
             <ChevronRight className="w-4 h-4" />
           </button>

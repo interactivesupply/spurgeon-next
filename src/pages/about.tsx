@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { GetStaticProps } from "next";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { getSharedPageData, type SharedPageData } from "@/lib/shared-data";
 import { decodeEntities } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import PageHead from "@/components/PageHead";
+import VideoModal from "@/components/conference-media/VideoModal";
 
 interface AboutSection {
   title: string;
@@ -97,6 +98,8 @@ function FloatPortrait({ src, caption }: { src: string; caption: string }) {
 }
 
 export default function About({ about, shared }: AboutProps) {
+  const [videoOpen, setVideoOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       <PageHead
@@ -158,11 +161,11 @@ export default function About({ about, shared }: AboutProps) {
         {about.video.url && (
           <div className="relative max-w-3xl mx-auto px-6 pb-16">
             <p className="font-sans text-xs text-primary-foreground/40 tracking-[0.2em] uppercase mb-3 text-center">{decodeEntities(about.video.label)}</p>
-            <a
-              href={about.video.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block rounded-2xl overflow-hidden aspect-video shadow-2xl border border-primary-foreground/10 relative group">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              aria-label={`Play video: ${about.video.label}`}
+              className="block w-full rounded-2xl overflow-hidden aspect-video shadow-2xl border border-primary-foreground/10 relative group cursor-pointer">
               {about.video.thumb && (
                 <img
                   src={about.video.thumb}
@@ -174,7 +177,7 @@ export default function About({ about, shared }: AboutProps) {
                   <PlayCircle className="w-8 h-8 text-primary" />
                 </div>
               </div>
-            </a>
+            </button>
           </div>
         )}
       </div>
@@ -255,6 +258,12 @@ export default function About({ about, shared }: AboutProps) {
         heading={shared.timeline.heading}
         milestones={shared.timeline.milestones} />
       <FooterSection settings={shared.footer} footerColumns={shared.nav?.footerColumns} />
+
+      <VideoModal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        videoUrl={about.video.url}
+        title={about.video.label} />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, PlayCircle } from "lucide-react";
@@ -70,7 +70,7 @@ export default function SearchResultCard({ sermon }) {
               {(sermon.date_preached || sermon.year) && (
                 <span className="font-sans text-xs text-muted-foreground">
                   {sermon.date_preached
-                    ? format(new Date(sermon.date_preached), "MMMM d, yyyy")
+                    ? format(parseISO(sermon.date_preached.substring(0, 10)), "MMMM d, yyyy")
                     : sermon.year}
                 </span>
               )}
@@ -92,11 +92,6 @@ export default function SearchResultCard({ sermon }) {
               <p className="font-sans text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-2">
                 {stripHtml(sermon.excerpt)}
               </p>
-            )}
-            {sermon.topic && (
-              <span className="inline-block mt-3 font-sans text-xs text-muted-foreground bg-muted rounded-full px-2.5 py-1">
-                {sermon.topic}
-              </span>
             )}
           </div>
           <ArrowRight className="w-4 h-4 text-muted-foreground/30 group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 hidden md:block mt-2" />

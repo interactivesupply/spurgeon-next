@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 
 const SITE_NAME = "The Spurgeon Library";
 const SITE_TAGLINE = "A Resource from Midwestern Seminary";
-const DEFAULT_OG_IMAGE = "https://spurgeoncenter.wpenginepowered.com/wp-content/uploads/2026/04/3fc58e03b_logo-cs-horz-top2.png";
+const DEFAULT_OG_IMAGE = "https://www.spurgeon.org/og-default.jpg";
 // The site's canonical public origin. Today it's the WP Engine preview URL
 // while we're pre-cutover; this is the one knob to flip when the site
 // moves behind spurgeon.org.
