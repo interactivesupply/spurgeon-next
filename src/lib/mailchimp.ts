@@ -67,3 +67,70 @@ export async function subscribeToList({ email, firstName, lastName, tag }: Subsc
     body: JSON.stringify({ tags: [{ name: tag, status: 'active' }] }),
   });
 }
+
+export interface DevotionalCampaignOptions {
+  subject: string;
+  previewText?: string;
+  html: string;
+  tag: string;
+}
+
+export async function sendDevotionalCampaign({ subject, previewText, html, tag }: DevotionalCampaignOptions) {
+  if (!TOKEN) throw new Error('Mailchimp not configured');
+
+  const base = `https://${SERVER}.api.mailchimp.com/3.0`;
+  const headers = {
+    Authorization: `Bearer ${TOKEN}`,
+    'Content-Type': 'application/json',
+  };
+
+  // Tags in Mailchimp are stored as static segments — find by name.
+  const segsRes = await fetch(`${base}/lists/${LIST_ID}/segments?type=static&count=1000`, { headers });
+  if (!segsRes.ok) throw new Error('Failed to fetch Mailchimp segments');
+  const segsData: any = await segsRes.json();
+  const segment = segsData.segments?.find((s: any) => s.name === tag);
+  if (!segment) throw new Error(`No Mailchimp segment found for tag: "${tag}"`);
+
+  // Create campaign targeting the tag segment.
+  const campRes = await fetch(`${base}/campaigns`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      type: 'regular',
+      recipients: {
+        list_id: LIST_ID,
+        segment_opts: { saved_segment_id: segment.id },
+      },
+      settings: {
+        subject_line: subject,
+        preview_text: previewText ?? '',
+        from_name: 'Spurgeon Library',
+        reply_to: 'spurgeon@mbts.edu',
+      },
+    }),
+  });
+  if (!campRes.ok) {
+    const err: any = await campRes.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Failed to create Mailchimp campaign');
+  }
+  const campaign: any = await campRes.json();
+
+  const contentRes = await fetch(`${base}/campaigns/${campaign.id}/content`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify({ html }),
+  });
+  if (!contentRes.ok) {
+    const err: any = await contentRes.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Failed to set campaign content');
+  }
+
+  const sendRes = await fetch(`${base}/campaigns/${campaign.id}/actions/send`, {
+    method: 'POST',
+    headers,
+  });
+  if (!sendRes.ok) {
+    const err: any = await sendRes.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Failed to send campaign');
+  }
+}

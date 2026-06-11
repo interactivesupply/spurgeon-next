@@ -1,0 +1,29 @@
+name: Send Morning Devotional Emails
+
+on:
+  workflow_dispatch: {}
+  # Uncomment on July 1, 2026 to activate daily sends.
+  # 6 AM CST = 12:00 UTC  /  6 AM CDT = 11:00 UTC
+  # schedule:
+  #   - cron: '0 12 * * *'
+
+jobs:
+  send:
+    name: Send M&E Morning + Faith's Check-Book
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Morning and Evening (morning)
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"devotional":"morning_and_evening","period":"morning"}' \
+            ${{ secrets.SITE_URL }}/api/send-devotional-email
+
+      - name: Send Faith's Check-Book
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"devotional":"faiths_check_book","period":"morning"}' \
+            ${{ secrets.SITE_URL }}/api/send-devotional-email
