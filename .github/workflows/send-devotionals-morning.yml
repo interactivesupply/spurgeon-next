@@ -2,10 +2,10 @@ name: Send Morning Devotional Emails
 
 on:
   workflow_dispatch: {}
-  # Uncomment on July 1, 2026 to activate daily sends.
   # 6 AM CST = 12:00 UTC  /  6 AM CDT = 11:00 UTC
-  # schedule:
-  #   - cron: '0 12 * * *'
+  # Remove TEST_EMAIL_OVERRIDE from env/secrets to send to full subscriber list.
+  schedule:
+    - cron: '0 12 * * *'
 
 jobs:
   send:

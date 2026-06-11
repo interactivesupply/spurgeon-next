@@ -5,6 +5,9 @@ import { sendDevotionalCampaign } from '@/lib/mailchimp';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.spurgeon.org';
+// When set, all sends go to this address only (Mailchimp test send) instead of
+// the full subscriber list. Remove this env var to go fully live.
+const TEST_EMAIL_OVERRIDE = process.env.TEST_EMAIL_OVERRIDE;
 
 function getCTDateParts(): { month: string; day: string; year: string } {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -87,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const devotional = req.body?.devotional as DevotionalType;
   const period = (req.body?.period as Period) ?? 'morning';
-  const testEmail = typeof req.body?.testEmail === 'string' ? req.body.testEmail : undefined;
+  const testEmail = TEST_EMAIL_OVERRIDE || (typeof req.body?.testEmail === 'string' ? req.body.testEmail : undefined);
 
   if (!devotional || !TAGS[devotional]) {
     return res.status(400).json({ error: 'devotional must be morning_and_evening or faiths_check_book' });
