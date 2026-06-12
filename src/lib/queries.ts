@@ -723,6 +723,7 @@ export const GET_HOME_PAGE_CONTENT = gql`
           count
           title
           description
+          resourceUrl
           searchTerm
         }
         libvisitEyebrow

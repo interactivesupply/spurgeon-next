@@ -124,7 +124,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
           description: r.description,
           count: r.count,
           searchTerm: r.searchTerm,
-          url: r.url || null,
+          url: r.resourceUrl || null,
         })),
       },
       libvisit: {
