@@ -11,6 +11,7 @@ const GET_SITE_SETTINGS = gql`
         footerQuoteAuthor
         footerMbtsPursueLabel
         footerMbtsPursueUrl
+        footerCopyrightLine
         mbtsEyebrow
         mbtsHeading
         mbtsBody
@@ -52,6 +53,7 @@ export interface SiteSettings {
   quoteAuthor: string;
   mbtsPursueLabel: string;
   mbtsPursueUrl: string;
+  copyrightLine: string;
 }
 
 export interface MBTSContent {
@@ -104,6 +106,7 @@ const EMPTY: SharedPageData = {
     quoteAuthor: '',
     mbtsPursueLabel: '',
     mbtsPursueUrl: '',
+    copyrightLine: '',
   },
   mbts: { eyebrow: '', heading: '', body: '', ctaLabel: '', ctaUrl: '' },
   timeline: { eyebrow: '', heading: '', milestones: [] },
@@ -155,6 +158,7 @@ export async function getSharedPageData(): Promise<SharedPageData> {
         quoteAuthor: s.footerQuoteAuthor || '',
         mbtsPursueLabel: s.footerMbtsPursueLabel || '',
         mbtsPursueUrl: s.footerMbtsPursueUrl || '',
+        copyrightLine: s.footerCopyrightLine || '',
       },
       mbts: {
         eyebrow: s.mbtsEyebrow || '',

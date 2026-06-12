@@ -12,6 +12,7 @@ const DEFAULTS = {
   quoteAuthor: "Charles H. Spurgeon",
   mbtsPursueLabel: "Pursue an M.Div or Doctorate at MBTS.edu",
   mbtsPursueUrl: "https://www.mbts.edu/",
+  copyrightLine: "©2026 Midwestern Baptist Theological Seminary",
 };
 
 // Fallback footer columns when the editor-managed `footer_columns` field is
@@ -106,9 +107,16 @@ export default function FooterSection({ settings, footerColumns }) {
           </div>
 
           <div className="mt-12 pt-8 border-t border-primary-foreground/10 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="font-sans text-xs text-primary-foreground/30">
-              © {new Date().getFullYear()} The Spurgeon Center. All rights reserved.
-            </p>
+            <div className="flex flex-col items-center md:items-start gap-1">
+              <p className="font-sans text-xs text-primary-foreground/30">
+                © {new Date().getFullYear()} The Spurgeon Center. All rights reserved.
+              </p>
+              {v('copyrightLine') && (
+                <p className="font-sans text-xs text-primary-foreground/50">
+                  {decodeEntities(v('copyrightLine'))}
+                </p>
+              )}
+            </div>
             <p className="font-sans text-xs text-primary-foreground/30 italic">
               "{decodeEntities(v('quote'))}"
             </p>
