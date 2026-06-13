@@ -12,7 +12,7 @@ const DEFAULTS = {
   quoteAuthor: "Charles H. Spurgeon",
   mbtsPursueLabel: "Pursue an M.Div or Doctorate at MBTS.edu",
   mbtsPursueUrl: "https://www.mbts.edu/",
-  copyrightLine: "©2026 Midwestern Baptist Theological Seminary",
+  copyrightLine: "©2026 MBTS",
 };
 
 // Fallback footer columns when the editor-managed `footer_columns` field is
