@@ -13,6 +13,18 @@ type DevotionalPayload = {
   scripture: string | null;
 } | null;
 
+type DevotionalQueryResult = {
+  morningAndEveningEntries: {
+    nodes: Array<{
+      title: string | null;
+      content: string | null;
+      morningAndEveningFields: {
+        scripture: string | null;
+      } | null;
+    }>;
+  } | null;
+};
+
 /**
  * Returns this morning's Morning & Evening devotional for the requested date.
  *
@@ -36,7 +48,7 @@ export default async function handler(
     typeof req.query.day === 'string' ? req.query.day : String(now.getDate());
 
   try {
-    const { data } = await apolloClient.query({
+    const { data } = await apolloClient.query<DevotionalQueryResult>({
       query: GET_DEVOTIONAL_ENTRY,
       variables: { month, day, period: 'morning' },
     });

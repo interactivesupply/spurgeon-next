@@ -30,6 +30,12 @@ type SermonNode = {
   } | null;
 };
 
+type SermonsQueryResult = {
+  sermons: {
+    nodes: SermonNode[];
+  };
+};
+
 /**
  * Returns the 10 most recent published sermons, matching the shape used by
  * the homepage WeeklyPulpit component.
@@ -47,7 +53,7 @@ export default async function handler(
   res: NextApiResponse<SermonNode[]>,
 ) {
   try {
-    const { data } = await apolloClient.query({ query: QUERY });
+    const { data } = await apolloClient.query<SermonsQueryResult>({ query: QUERY });
     const nodes: SermonNode[] = data?.sermons?.nodes ?? [];
 
     // Sermons don't change by the minute; a 5-minute CDN cache reduces WP
