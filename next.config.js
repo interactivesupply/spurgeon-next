@@ -66,6 +66,10 @@ const nextConfig = {
 
     return [
       ...legacyPageRedirects,
+      // WordPress assigns the home page the slug "home". Faust's URL rewriting
+      // can surface /home/ as a navigable URL; redirect it to / so the homepage
+      // is always served by index.tsx rather than the catch-all 404 handler.
+      { source: '/home', destination: '/', permanent: true },
       // /spurgeon-center was the old slug for the library page
       { source: '/spurgeon-center', destination: '/library', permanent: true },
       // Always redirect old sermon detail UUID-based URLs through the API lookup
