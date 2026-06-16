@@ -34,7 +34,7 @@ export default function Home(props: HomeProps) {
   const flatDevotional = props.devotional ? {
     title: props.devotional.title,
     text: props.devotional.content,
-    scripture: props.devotional.devotionalEntryFields?.scripture,
+    scripture: props.devotional.morningAndEveningFields?.scripture,
   } : null;
 
   return (

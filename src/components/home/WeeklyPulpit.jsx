@@ -6,6 +6,11 @@ import { ROUTES } from "@/lib/routes";
 import { decodeEntities, stripHtml } from "@/lib/utils";
 import { format } from "date-fns";
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 const QUOTES = [
   "A Bible which is falling apart usually belongs to someone who isn't.",
   "I have a great need for Christ; I have a great Christ for my need.",
@@ -45,25 +50,63 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
   const [todayLabel, setTodayLabel] = useState("");
   const [todaySublabel, setTodaySublabel] = useState("");
   const [sermonIdx, setSermonIdx] = useState(0);
+  // Client-fetched devotional — overrides the ISR-baked prop once the browser
+  // knows today's actual date. Fixes a staleness bug where ISR regenerates the
+  // page on day N and a visitor on day D+1 sees yesterday's devotional even
+  // though the date label already shows today.
+  const [clientDevotional, setClientDevotional] = useState(null);
+  // Client-fetched sermons — populated on mount when the ISR-baked prop is
+  // empty (i.e., the page was generated before any sermons were imported).
+  // Falls through to latestSermons prop once ISR catches up, but ensures the
+  // card never shows "Coming soon" on a live site that has sermon content.
+  const [clientSermons, setClientSermons] = useState(null);
 
   useEffect(() => {
     setQuoteIndex(Math.floor(Math.random() * QUOTES.length));
     setTodayLabel(format(new Date(), "EEEE, MMMM d"));
     setTodaySublabel(format(new Date(), "MMMM d") + " — Morning");
-    if (latestSermons?.length) {
-      setSermonIdx(new Date().getDay() % latestSermons.length);
+    const sermonPool = clientSermons || latestSermons;
+    if (sermonPool?.length) {
+      setSermonIdx(new Date().getDay() % sermonPool.length);
     }
-  }, [latestSermons]);
+  }, [latestSermons, clientSermons]);
 
   useEffect(() => {
     const t = setInterval(() => setQuoteIndex(i => (i + 1) % QUOTES.length), 8000);
     return () => clearInterval(t);
   }, []);
 
-  const dev = devotional || PLACEHOLDER_DEVOTIONAL;
+  // Fetch today's morning devotional using the browser's local date so the
+  // content always matches the date label, regardless of when the ISR page
+  // was last regenerated on the server.
+  useEffect(() => {
+    const now = new Date();
+    const month = MONTHS[now.getMonth()];
+    const day = String(now.getDate());
+    fetch(`/api/today-devotional?month=${encodeURIComponent(month)}&day=${encodeURIComponent(day)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setClientDevotional(data); })
+      .catch(() => {}); // silently keep the ISR prop as fallback
+  }, []);
+
+  // Fetch sermons client-side when the ISR-baked prop is empty. This handles
+  // the case where the production page was built before any sermons were
+  // imported — the page serves stale empty-sermon props until ISR catches up,
+  // but this fetch ensures the card shows real content immediately.
+  useEffect(() => {
+    if (!latestSermons?.length) {
+      fetch('/api/latest-sermons')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data?.length) setClientSermons(data); })
+        .catch(() => {});
+    }
+  }, [latestSermons]);
+
+  const dev = clientDevotional || devotional || PLACEHOLDER_DEVOTIONAL;
   const art = article || PLACEHOLDER_ARTICLE;
 
-  const sermon = latestSermons?.length ? latestSermons[sermonIdx] : null;
+  const effectiveSermons = clientSermons || latestSermons;
+  const sermon = effectiveSermons?.length ? effectiveSermons[sermonIdx] : null;
 
   const items = [
     {
@@ -112,7 +155,7 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
       // gibberish ("THE ! I mul flu ®mul; A RECORD OF COMBAT…"), so the
       // card surfaces just the title + CTA (Userback #7678693).
       text: null,
-      href: article ? ROUTES.SwordAndTrowel : ROUTES.Search + "?type=article",
+      href: article?.slug ? ROUTES.MagazineArticle(article.slug) : ROUTES.SwordAndTrowel,
       cta: "Read the article",
       available: true,
     },
