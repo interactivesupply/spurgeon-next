@@ -6,6 +6,11 @@ import { ROUTES } from "@/lib/routes";
 import { decodeEntities, stripHtml } from "@/lib/utils";
 import { format } from "date-fns";
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 const QUOTES = [
   "A Bible which is falling apart usually belongs to someone who isn't.",
   "I have a great need for Christ; I have a great Christ for my need.",
@@ -45,6 +50,11 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
   const [todayLabel, setTodayLabel] = useState("");
   const [todaySublabel, setTodaySublabel] = useState("");
   const [sermonIdx, setSermonIdx] = useState(0);
+  // Client-fetched devotional — overrides the ISR-baked prop once the browser
+  // knows today's actual date. This fixes a staleness bug where ISR regenerates
+  // the page on day N and caches month=N day=D, so a visitor on day D+1 sees
+  // yesterday's devotional even though the date label already shows today.
+  const [clientDevotional, setClientDevotional] = useState(null);
 
   useEffect(() => {
     setQuoteIndex(Math.floor(Math.random() * QUOTES.length));
@@ -60,7 +70,20 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
     return () => clearInterval(t);
   }, []);
 
-  const dev = devotional || PLACEHOLDER_DEVOTIONAL;
+  // Fetch today's morning devotional using the browser's local date so the
+  // content always matches the date label, regardless of when the ISR page
+  // was last regenerated on the server.
+  useEffect(() => {
+    const now = new Date();
+    const month = MONTHS[now.getMonth()];
+    const day = String(now.getDate());
+    fetch(`/api/today-devotional?month=${encodeURIComponent(month)}&day=${encodeURIComponent(day)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setClientDevotional(data); })
+      .catch(() => {}); // silently keep the ISR prop as fallback
+  }, []);
+
+  const dev = clientDevotional || devotional || PLACEHOLDER_DEVOTIONAL;
   const art = article || PLACEHOLDER_ARTICLE;
 
   const sermon = latestSermons?.length ? latestSermons[sermonIdx] : null;
@@ -112,7 +135,7 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
       // gibberish ("THE ! I mul flu ®mul; A RECORD OF COMBAT…"), so the
       // card surfaces just the title + CTA (Userback #7678693).
       text: null,
-      href: article ? ROUTES.SwordAndTrowel : ROUTES.Search + "?type=article",
+      href: article?.slug ? ROUTES.MagazineArticle(article.slug) : ROUTES.SwordAndTrowel,
       cta: "Read the article",
       available: true,
     },
