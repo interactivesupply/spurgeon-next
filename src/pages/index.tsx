@@ -34,7 +34,7 @@ export default function Home(props: HomeProps) {
   const flatDevotional = props.devotional ? {
     title: props.devotional.title,
     text: props.devotional.content,
-    scripture: props.devotional.devotionalEntryFields?.scripture,
+    scripture: props.devotional.morningAndEveningFields?.scripture,
   } : null;
 
   return (
@@ -164,6 +164,7 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         quoteAuthor: settings.footerQuoteAuthor,
         mbtsPursueLabel: settings.footerMbtsPursueLabel,
         mbtsPursueUrl: settings.footerMbtsPursueUrl,
+        copyrightLine: settings.footerCopyrightLine,
       },
       // Navigation (header mega-menus, inline links, footer columns) is
       // also read from spurgeonSettings.navigationSettings; passes straight

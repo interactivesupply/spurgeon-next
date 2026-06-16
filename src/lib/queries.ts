@@ -672,6 +672,7 @@ export const GET_HOME_PAGE_CONTENT = gql`
         footerQuoteAuthor
         footerMbtsPursueLabel
         footerMbtsPursueUrl
+        footerCopyrightLine
         mbtsEyebrow
         mbtsHeading
         mbtsBody
