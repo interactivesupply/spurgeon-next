@@ -112,7 +112,7 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
       // gibberish ("THE ! I mul flu ®mul; A RECORD OF COMBAT…"), so the
       // card surfaces just the title + CTA (Userback #7678693).
       text: null,
-      href: article ? ROUTES.SwordAndTrowel : ROUTES.Search + "?type=article",
+      href: article?.slug ? ROUTES.MagazineArticle(article.slug) : ROUTES.SwordAndTrowel,
       cta: "Read the article",
       available: true,
     },
