@@ -142,20 +142,14 @@ export default function WeeklyPulpit({ devotional, latestSermons = [], article }
     {
       key: "article",
       label: "From the Library",
-      sublabel: "Featured Article",
+      sublabel: "This week's article",
       icon: FileText,
-      // Was bg-blue-50 / text-blue-600; the blue clashed visibly with
-      // the cream/amber tones of the other two cards (Userback #7654353).
-      // Matching the warm palette here keeps the trio cohesive.
       iconBg: "bg-secondary",
       iconColor: "text-primary",
       accentColor: "border-secondary",
       title: art.title || "Featured Article",
-      // The S&T-derived excerpt is OCR-extracted scan text and reads as
-      // gibberish ("THE ! I mul flu ®mul; A RECORD OF COMBAT…"), so the
-      // card surfaces just the title + CTA (Userback #7678693).
-      text: null,
-      href: article?.slug ? ROUTES.MagazineArticle(article.slug) : ROUTES.SwordAndTrowel,
+      text: art.excerpt || null,
+      href: article?.slug ? ROUTES.Article(article.slug) : ROUTES.Articles,
       cta: "Read the article",
       available: true,
     },
