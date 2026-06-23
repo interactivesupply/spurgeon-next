@@ -14,6 +14,22 @@ import { GET_HOME_PAGE_CONTENT } from "@/lib/queries";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
+// Returns the ISO week number (1–53) for a given date.
+function isoWeek(date: Date): number {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+}
+
+// Returns midnight (UTC) on the Monday that starts the week containing `date`.
+function weekStartUTC(date: Date): Date {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay();
+  d.setUTCDate(d.getUTCDate() - (day === 0 ? 6 : day - 1));
+  return d;
+}
+
 interface HomeProps {
   hero: any;
   stats: any[];
@@ -180,7 +196,16 @@ export const getStaticProps: GetStaticProps<HomeProps> = async () => {
         home.featuredSermons?.nodes?.length
           ? home.featuredSermons.nodes
           : (d?.fallbackFeaturedSermons?.nodes || []),
-      featuredArticle: d?.featuredArticle?.nodes?.[0] || null,
+      featuredArticle: (() => {
+        const articles: any[] = d?.featuredArticles?.nodes || [];
+        if (!articles.length) return null;
+        // If an article was published during the current calendar week, show it.
+        const thisWeek = weekStartUTC(now);
+        const newThisWeek = articles.filter(a => new Date(a.date) >= thisWeek);
+        if (newThisWeek.length) return newThisWeek[0];
+        // Otherwise rotate through the pool — same pick all week, advances each Monday.
+        return articles[isoWeek(now) % articles.length];
+      })(),
     };
 
     return { props, revalidate: 3600 };
