@@ -2,17 +2,37 @@ name: Send Morning Devotional Emails
 
 on:
   workflow_dispatch: {}
-  # 6 AM CST = 12:00 UTC  /  6 AM CDT = 11:00 UTC
+  # GitHub cron is UTC-only, so we schedule BOTH possible UTC times for 6 AM
+  # Central and let the "Guard" step below run the send only when it is actually
+  # 6 AM in America/Chicago. This keeps the send at 6 AM CT year-round through
+  # DST changes. Minute is :17 (not :00) because GitHub's scheduler is most
+  # overloaded — and most likely to delay/drop runs — at the top of the hour.
+  #   6 AM CDT (summer) = 11:17 UTC
+  #   6 AM CST (winter) = 12:17 UTC
   # Remove TEST_EMAIL_OVERRIDE from env/secrets to send to full subscriber list.
   schedule:
-    - cron: '0 12 * * *'
+    - cron: '17 11 * * *'
+    - cron: '17 12 * * *'
 
 jobs:
   send:
     name: Send M&E Morning + Faith's Check-Book
     runs-on: ubuntu-latest
     steps:
+      - name: Guard — only proceed at 6 AM Central Time
+        id: guard
+        run: |
+          HOUR=$(TZ=America/Chicago date +%H)
+          echo "Current Central Time hour: $HOUR"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$HOUR" = "06" ]; then
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            echo "Not 6 AM Central (DST guard) — skipping this run."
+          fi
+
       - name: Send Morning and Evening (morning)
+        if: steps.guard.outputs.proceed == 'true'
         run: |
           curl -sf -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
@@ -21,6 +41,7 @@ jobs:
             ${{ secrets.SITE_URL }}/api/send-devotional-email
 
       - name: Send Faith's Check-Book
+        if: steps.guard.outputs.proceed == 'true'
         run: |
           curl -sf -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \

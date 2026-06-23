@@ -10,7 +10,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
 
   // Setting expiry to 0 causes the middleware to treat the cache as stale.
   // The next incoming page request will trigger a background refresh.
-  global.__redirectExpiry = 0;
+  globalThis.__redirectExpiry = 0;
 
   return res.status(200).json({ revalidated: true });
 }
