@@ -60,18 +60,17 @@ The local WordPress admin is at `https://spurgeoncenter.wpenginepowered.com/wp-a
 
 ```bash
 cd ~/src/headless/spurgeon-next
-nvm use 22
-npm run dev
+./dev.sh
 ```
 
-Site is at **http://localhost:3000**.
+Site is at **https://www.spurgeon.org** (Chrome) or **http://localhost:3000** (Brave/other).
 
 If pages render stale data or you see weird module errors, clear the build cache:
 
 ```bash
 pkill -f "next dev"
 rm -rf .next
-npm run dev
+./dev.sh
 ```
 
 ---
@@ -144,9 +143,9 @@ NODE_TLS_REJECT_UNAUTHORIZED=0
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Pages 404 across the board | Next.js dev server not running | `nvm use 22 && npm run dev` |
+| Pages 404 across the board | Next.js dev server not running | `./dev.sh` |
 | `ECONNREFUSED` or GraphQL errors | Docker not running / backend down | `cd ~/src/docker && ./dev-conf/deployment/docker.sh start` |
-| Stale data after editing in WP | Apollo / Next.js cache | Restart dev server: `pkill -f "next dev" && rm -rf .next && npm run dev` |
+| Stale data after editing in WP | Apollo / Next.js cache | Restart dev server: `pkill -f "next dev" && rm -rf .next && ./dev.sh` |
 | `Error: self-signed certificate` | `NODE_TLS_REJECT_UNAUTHORIZED` not set | Confirm `.env.local` has `NODE_TLS_REJECT_UNAUTHORIZED=0` |
 | GraphQL errors about `metaQuery` | wp-graphql-meta-query plugin disabled | Reactivate in local `wp-admin → Plugins` |
 | `Internal server error` from `spurgeonSearch` | spurgeon-graphql plugin disabled | Reactivate in local `wp-admin → Plugins` |
