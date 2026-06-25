@@ -12,7 +12,7 @@ This is a **headless WordPress site**: a Next.js/Faust.js frontend (this repo) b
 
 - Your machine runs the Interactive Supply Docker stack (`~/src/docker`)
 - Your SSH key is added to WP Engine (my.wpengine.com → SSH keys)
-- Your GitHub account has been added as a collaborator on this repo
+- Your GitHub account has been added as a collaborator on **both** this repo and [`interactivesupply/spurgeoncenter.wpengine`](https://github.com/interactivesupply/spurgeoncenter.wpengine)
 - Node ≥ 18 via nvm (v22 recommended: `nvm install 22`)
 
 ### Run the setup script
@@ -31,6 +31,17 @@ This script:
 4. Clones this repo to `~/src/headless/spurgeon-next` (if not already cloned)
 5. Runs `npm install` on Node 22
 6. Writes `.env.local` pointing the frontend at your local backend
+
+**After the script completes**, connect the WP backend to the IS GitHub repo:
+
+```bash
+cd ~/src/docker/sites/spurgeoncenter.wpengine
+git remote add origin git@github.com:interactivesupply/spurgeoncenter.wpengine.git
+git fetch origin
+git reset --hard origin/master
+```
+
+This replaces the rsync'd files with the git-tracked version, ensuring WP core, plugins, and themes stay in sync with what the team deploys.
 
 **After the script completes**, copy the Faust secret key into `.env.local`:
 1. Open `https://spurgeoncenter.wpenginepowered.com/wp-admin`
@@ -77,12 +88,25 @@ rm -rf .next
 
 ## Common Tasks
 
-### Refresh the local database from production
+### Keep the backend in sync with production
 
-When you need a fresh copy of the production content:
+The WP backend (`spurgeoncenter`) is tracked in [`interactivesupply/spurgeoncenter.wpengine`](https://github.com/interactivesupply/spurgeoncenter.wpengine). When a teammate pushes a change (WP core update, plugin change, theme update), pull it locally:
+
+```bash
+git -C ~/src/docker/sites/spurgeoncenter.wpengine pull
+```
+
+To also refresh the database with the latest production content:
 
 ```bash
 ~/src/docker/dev-conf/deployment/website_helper_scripts.sh spurgeoncenter 1
+```
+
+Run both together at the start of any session where you need to be fully up to date:
+
+```bash
+git -C ~/src/docker/sites/spurgeoncenter.wpengine pull && \
+  ~/src/docker/dev-conf/deployment/website_helper_scripts.sh spurgeoncenter 1
 ```
 
 ### Connect to the production WordPress via SSH
@@ -150,3 +174,4 @@ NODE_TLS_REJECT_UNAUTHORIZED=0
 | GraphQL errors about `metaQuery` | wp-graphql-meta-query plugin disabled | Reactivate in local `wp-admin → Plugins` |
 | `Internal server error` from `spurgeonSearch` | spurgeon-graphql plugin disabled | Reactivate in local `wp-admin → Plugins` |
 | `Cannot find module 'node:fs'` on npm install | Node version too old (< 18) | `nvm use 22` then `npm install` again |
+| WP version mismatch / missing plugins | Local backend files out of date | `git -C ~/src/docker/sites/spurgeoncenter.wpengine pull` |
