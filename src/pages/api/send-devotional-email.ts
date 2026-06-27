@@ -5,9 +5,17 @@ import { sendDevotionalCampaign } from '@/lib/mailchimp';
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.spurgeon.org';
-// When set, all sends go to this address only (Mailchimp test send) instead of
-// the full subscriber list. Remove this env var to go fully live.
+// When set, all sends go to these address(es) only (Mailchimp test send) instead
+// of the full subscriber list. Accepts a comma/space/semicolon-separated list.
+// Remove this env var to go fully live.
 const TEST_EMAIL_OVERRIDE = process.env.TEST_EMAIL_OVERRIDE;
+
+/** Parse a list of email addresses from a string (comma/semicolon/whitespace separated) or array. */
+function parseEmails(value: unknown): string[] {
+  if (Array.isArray(value)) return value.filter((v): v is string => typeof v === 'string').map(v => v.trim()).filter(Boolean);
+  if (typeof value === 'string') return value.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+  return [];
+}
 
 function getCTDateParts(): { month: string; day: string; year: string } {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -90,7 +98,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const devotional = req.body?.devotional as DevotionalType;
   const period = (req.body?.period as Period) ?? 'morning';
-  const testEmail = TEST_EMAIL_OVERRIDE || (typeof req.body?.testEmail === 'string' ? req.body.testEmail : undefined);
+  const testEmails = TEST_EMAIL_OVERRIDE
+    ? parseEmails(TEST_EMAIL_OVERRIDE)
+    : parseEmails(req.body?.testEmail);
 
   if (!devotional || !TAGS[devotional]) {
     return res.status(400).json({ error: 'devotional must be morning_and_evening or faiths_check_book' });
@@ -136,9 +146,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const html = buildEmailHtml({ title, scripture, content, date: dateLabel, devotionalName });
 
-    await sendDevotionalCampaign({ subject, html, tag: TAGS[devotional], testEmail });
+    await sendDevotionalCampaign({ subject, html, tag: TAGS[devotional], testEmails });
 
-    return res.status(200).json({ success: true, subject, date: dateLabel, test: !!testEmail });
+    return res.status(200).json({ success: true, subject, date: dateLabel, test: testEmails.length > 0, testRecipients: testEmails });
   } catch (err: any) {
     console.error('[send-devotional-email]', err);
     return res.status(500).json({ error: err.message || 'Internal error' });

@@ -73,11 +73,11 @@ export interface DevotionalCampaignOptions {
   previewText?: string;
   html: string;
   tag: string;
-  /** When set, sends a Mailchimp test email to this address instead of the full subscriber list. The draft campaign is deleted afterwards. */
-  testEmail?: string;
+  /** When non-empty, sends a Mailchimp test email to these address(es) instead of the full subscriber list. The draft campaign is deleted afterwards. */
+  testEmails?: string[];
 }
 
-export async function sendDevotionalCampaign({ subject, previewText, html, tag, testEmail }: DevotionalCampaignOptions) {
+export async function sendDevotionalCampaign({ subject, previewText, html, tag, testEmails }: DevotionalCampaignOptions) {
   if (!TOKEN) throw new Error('Mailchimp not configured');
 
   const base = `https://${SERVER}.api.mailchimp.com/3.0`;
@@ -127,12 +127,12 @@ export async function sendDevotionalCampaign({ subject, previewText, html, tag, 
     throw new Error(err?.detail || 'Failed to set campaign content');
   }
 
-  if (testEmail) {
-    // Send a preview to the test address only; delete the draft when done.
+  if (testEmails && testEmails.length > 0) {
+    // Send a preview to the test address(es) only; delete the draft when done.
     const testRes = await fetch(`${base}/campaigns/${campaign.id}/actions/test`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ test_emails: [testEmail], send_type: 'html' }),
+      body: JSON.stringify({ test_emails: testEmails, send_type: 'html' }),
     });
     await fetch(`${base}/campaigns/${campaign.id}`, { method: 'DELETE', headers });
     if (!testRes.ok) {

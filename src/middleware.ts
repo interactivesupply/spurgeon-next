@@ -1,5 +1,3 @@
-export const runtime = 'nodejs';
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -10,8 +8,11 @@ interface RedirectRule {
   regex: number;
 }
 
-// Store cache on `global` so it is shared between the middleware and the
-// /api/revalidate-redirects route within the same Node.js process.
+// Cache redirect rules on `globalThis` so they persist across requests within a
+// worker isolate. On Cloudflare (Edge runtime) this is a per-isolate, best-effort
+// cache rather than a single shared Node.js process; the CACHE_TTL_MS fallback
+// below keeps rules fresh even when the /api/revalidate-redirects webhook does
+// not reach the same isolate.
 declare global {
   // eslint-disable-next-line no-var
   var __redirectRules: RedirectRule[];
@@ -20,15 +21,15 @@ declare global {
   // eslint-disable-next-line no-var
   var __redirectRefreshing: boolean;
 }
-global.__redirectRules      ??= [];
-global.__redirectExpiry     ??= 0;
-global.__redirectRefreshing ??= false;
+globalThis.__redirectRules      ??= [];
+globalThis.__redirectExpiry     ??= 0;
+globalThis.__redirectRefreshing ??= false;
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function refreshCache() {
-  if (global.__redirectRefreshing) return;
-  global.__redirectRefreshing = true;
+  if (globalThis.__redirectRefreshing) return;
+  globalThis.__redirectRefreshing = true;
   try {
     // Timestamp param busts WP Engine's CDN cache so we always get fresh rules.
     const res = await fetch(
@@ -38,27 +39,27 @@ async function refreshCache() {
     if (res.ok) {
       const raw = await res.json();
       // WordPress returns numeric columns as strings; coerce to numbers.
-      global.__redirectRules = raw.map((r: any) => ({
+      globalThis.__redirectRules = raw.map((r: any) => ({
         ...r,
         action_code: Number(r.action_code) || 301,
         regex:       Number(r.regex),
       }));
-      global.__redirectExpiry = Date.now() + CACHE_TTL_MS;
+      globalThis.__redirectExpiry = Date.now() + CACHE_TTL_MS;
     }
   } catch {
     // Keep serving stale cache on network error.
   } finally {
-    global.__redirectRefreshing = false;
+    globalThis.__redirectRefreshing = false;
   }
 }
 
 async function getRedirects(): Promise<RedirectRule[]> {
-  if (global.__redirectRules.length === 0) {
+  if (globalThis.__redirectRules.length === 0) {
     await refreshCache();   // first request after startup — block once
-  } else if (Date.now() >= global.__redirectExpiry) {
+  } else if (Date.now() >= globalThis.__redirectExpiry) {
     refreshCache();         // stale — refresh in background, don't block
   }
-  return global.__redirectRules;
+  return globalThis.__redirectRules;
 }
 
 interface MatchResult {
