@@ -5,10 +5,11 @@ import { useRouter } from "next/router";
 const SITE_NAME = "The Spurgeon Library";
 const SITE_TAGLINE = "A Resource from Midwestern Seminary";
 const DEFAULT_OG_IMAGE = "https://www.spurgeon.org/og-default.jpg";
-// The site's canonical public origin. Today it's the WP Engine preview URL
-// while we're pre-cutover; this is the one knob to flip when the site
-// moves behind spurgeon.org.
-const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://h0go8mx5tru23ntaefo7520nt.js.wpenginepowered.com";
+// The site's canonical public origin. The site is live at www.spurgeon.org,
+// so that's the default; NEXT_PUBLIC_SITE_ORIGIN can override it (e.g. for a
+// staging origin). Never let this fall back to the WP Engine preview host —
+// canonicals pointing at *.wpenginepowered.com deindex the public domain.
+const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN || "https://www.spurgeon.org";
 
 export interface PageHeadProps {
   /** Page title. The site name suffix is appended automatically unless suppressSiteSuffix is true. */

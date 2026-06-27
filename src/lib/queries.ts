@@ -724,6 +724,7 @@ export const GET_HOME_PAGE_CONTENT = gql`
           count
           title
           description
+          resourceUrl
           searchTerm
         }
         libvisitEyebrow
@@ -829,8 +830,8 @@ export const GET_HOME_PAGE_CONTENT = gql`
         sermonCollections { nodes { name } }
       }
     }
-    featuredArticle: magazineArticles(first: 1, where: { orderby: { field: DATE, order: DESC } }) {
-      nodes { title slug excerpt }
+    featuredArticles: spurgeonArticles(first: 20, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes { title slug excerpt date }
     }
   }
 `;
@@ -876,8 +877,8 @@ export const GET_HOME_DATA = gql`
         sermonCollections { nodes { name } }
       }
     }
-    featuredArticle: magazineArticles(first: 1, where: { orderby: { field: DATE, order: DESC } }) {
-      nodes { title slug excerpt }
+    featuredArticles: spurgeonArticles(first: 20, where: { orderby: { field: DATE, order: DESC } }) {
+      nodes { title slug excerpt date }
     }
   }
 `;
