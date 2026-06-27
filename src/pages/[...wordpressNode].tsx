@@ -17,5 +17,8 @@ export const getStaticProps: GetStaticProps = async () => {
 };
 
 export const getStaticPaths: GetStaticPaths = async () => {
-  return { paths: [], fallback: 'blocking' };
+  // fallback: false — this catch-all always returns notFound: true, so
+  // 'blocking' adds no value and risks routing ambiguity in the Atlas runtime
+  // (on-demand rendering fires for every unrecognised path before 404ing).
+  return { paths: [], fallback: false };
 };
