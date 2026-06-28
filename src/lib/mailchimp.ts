@@ -128,16 +128,29 @@ export async function sendDevotionalCampaign({ subject, previewText, html, tag, 
   }
 
   if (testEmail) {
+    // Accept one or more addresses (comma/whitespace separated). Strip stray
+    // surrounding quotes — hosting env UIs (e.g. WP Engine Atlas) don't unquote
+    // values, so a TEST_EMAIL_OVERRIDE saved as "x@y.com" arrives with literal
+    // quotes and Mailchimp rejects it as an invalid email.
+    const testEmails = testEmail
+      .split(',')
+      .map(e => e.trim().replace(/^["']+|["']+$/g, ''))
+      .filter(Boolean);
+    if (testEmails.length === 0) throw new Error('No valid test email address provided');
+
     // Send a preview to the test address only; delete the draft when done.
     const testRes = await fetch(`${base}/campaigns/${campaign.id}/actions/test`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ test_emails: [testEmail], send_type: 'html' }),
+      body: JSON.stringify({ test_emails: testEmails, send_type: 'html' }),
     });
     await fetch(`${base}/campaigns/${campaign.id}`, { method: 'DELETE', headers });
     if (!testRes.ok) {
       const err: any = await testRes.json().catch(() => ({}));
-      throw new Error(err?.detail || 'Failed to send test email');
+      const fields = Array.isArray(err?.errors)
+        ? ` (${err.errors.map((e: any) => `${e.field}: ${e.message}`).join('; ')})`
+        : '';
+      throw new Error(`${err?.detail || 'Failed to send test email'}${fields}`);
     }
     return;
   }
